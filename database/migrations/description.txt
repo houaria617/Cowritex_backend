@@ -1,0 +1,3 @@
+ # Schema migration scripts
+ # One file per change — never edit schema.sql directly
+# after first deployment
