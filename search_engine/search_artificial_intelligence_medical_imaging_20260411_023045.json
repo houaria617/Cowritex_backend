@@ -1,0 +1,326 @@
+{
+  "search_metadata": {
+    "query": "artificial intelligence medical imaging",
+    "timestamp": "2026-04-11T02:30:45.410323",
+    "total_results": 20,
+    "filters_applied": {
+      "min_year": null,
+      "min_citations": null,
+      "require_pdf": false,
+      "max_results": 10
+    }
+  },
+  "results": [
+    {
+      "title": "Checklist for artificial intelligence in medical imaging (CLAIM): a guide for authors and reviewers",
+      "authors": [
+        "J Mongan",
+        "L Moy",
+        "CE Kahn Jr"
+      ],
+      "citations": 1262,
+      "year": 2020,
+      "abstract": "manuscripts in medical imaging, we propose CLAIM, the Checklist for AI in Medical Imaging  ( applications of AI in medical imaging that include classification, image reconstruction, text",
+      "score": 0.4003,
+      "paper_url": "https://pubs.rsna.org/doi/abs/10.1148/ryai.2020200029",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=Checklist%20for%20artificial%20intelligence%20in%20medical%20imaging%20%28CLAIM%29%3A%20a%20guide%20for%20authors%20and%20reviewers%20Mongan%20Moy",
+      "download_link": "https://pubs.rsna.org/radiographics/doi/full/10.1148/ryai.2020200029"
+    },
+    {
+      "title": "Foundation models for generalist medical artificial intelligence",
+      "authors": [
+        "Michael Moor",
+        "Oishi Banerjee",
+        "Zahra F H Abad",
+        "H. Krumholz",
+        "J. Leskovec",
+        "E. Topol",
+        "P. Rajpurkar"
+      ],
+      "citations": 1584,
+      "year": 2023,
+      "abstract": "The exceptionally rapid development of highly flexible, reusable artificial intelligence (AI) models is likely to usher in newfound capabilities in medicine. We propose a new paradigm for medical AI, which we refer to as generalist medical AI (GMAI). GMAI models will be capable of carrying out a diverse set of tasks using very little or no task-specific labelled data. Built through self-supervision on large, diverse datasets, GMAI will flexibly interpret different combinations of medical modalities, including data from imaging, electronic health records, laboratory results, genomics, graphs or medical text. Models will in turn produce expressive outputs such as free-text explanations, spoken recommendations or image annotations that demonstrate advanced medical reasoning abilities. Here we identify a set of high-impact potential applications for GMAI and lay out specific technical capabilities and training datasets necessary to enable them. We expect that GMAI-enabled applications will challenge current strategies for regulating and validating AI devices for medicine and will shift practices associated with the collection of large medical datasets. This review discusses generalist medical artificial intelligence, identifying potential applications and setting out specific technical capabilities and training datasets necessary to enable them, as well as highlighting challenges to its implementation.",
+      "score": 0.37,
+      "paper_url": "https://www.semanticscholar.org/paper/9faa2b0e5cb93f20df0555c3c350fab0b2eccf3a",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=Foundation%20models%20for%20generalist%20medical%20artificial%20intelligence%20Moor%20Banerjee",
+      "download_link": "https://www.nature.com/articles/s41586-023-05881-4.pdf"
+    },
+    {
+      "title": "Artificial intelligence in medical imaging: threat or opportunity? Radiologists again at the forefront of innovation in medicine",
+      "authors": [
+        "F Pesapane",
+        "M Codari",
+        "F Sardanelli"
+      ],
+      "citations": 1090,
+      "year": 2018,
+      "abstract": "will be left to non-experts in medical imaging.  intelligence, AI algorithms look at medical  images to identify patterns after being trained using vast numbers of examinations and images.",
+      "score": 0.3009,
+      "paper_url": "https://link.springer.com/article/10.1186/s41747-018-0061-6",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=Artificial%20intelligence%20in%20medical%20imaging%3A%20threat%20or%20opportunity%3F%20Radiologists%20again%20at%20the%20forefront%20of%20innovation%20in%20medicine%20Pesapane%20Codari",
+      "download_link": "https://link.springer.com/article/10.1186/s41747-018-0061-6"
+    },
+    {
+      "title": "How artificial intelligence is shaping medical imaging technology: a survey of innovations and applications",
+      "authors": [
+        "L Pinto-Coelho"
+      ],
+      "citations": 774,
+      "year": 2023,
+      "abstract": "images but also improve early detection of disease, ultimately delivering better outcomes  for patients. Additionally, AI-based image  AI has brought to medical imaging, highlighting its",
+      "score": 0.2903,
+      "paper_url": "https://www.mdpi.com/2306-5354/10/12/1435",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=How%20artificial%20intelligence%20is%20shaping%20medical%20imaging%20technology%3A%20a%20survey%20of%20innovations%20and%20applications%20Pinto-Coelho",
+      "download_link": "https://www.mdpi.com/2306-5354/10/12/1435"
+    },
+    {
+      "title": "Checklist for Artificial Intelligence in Medical Imaging (CLAIM): 2024 Update.",
+      "authors": [
+        "Ali S. Tejani",
+        "M. Klontzas",
+        "Anthony A Gatti",
+        "John T Mongan",
+        "Linda Moy",
+        "S. Park",
+        "Charles E. Kahn"
+      ],
+      "citations": 268,
+      "year": 2024,
+      "abstract": "\"Just Accepted\" papers have undergone full peer review and have been accepted for publication in Radiology: Artificial Intelligence. This article will undergo copyediting, layout, and proof review before it is published in its final version. Please note that during production of the final copyedited article, errors may be discovered which could affect the content.\n \n©RSNA, 2024.",
+      "score": 0.2486,
+      "paper_url": "https://www.semanticscholar.org/paper/91dd069b8c5f8d6cc125ddf0bc1ce78ac3fe291a",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=Checklist%20for%20Artificial%20Intelligence%20in%20Medical%20Imaging%20%28CLAIM%29%3A%202024%20Update.%20Tejani%20Klontzas",
+      "download_link": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11304031"
+    },
+    {
+      "title": "Artificial intelligence in medical imaging",
+      "authors": [
+        "JC Gore"
+      ],
+      "citations": 350,
+      "year": 2020,
+      "abstract": "The medical specialty radiology has experienced a number of extremely important and   past that have affected how medical imaging is deployed. Artificial intelligence (AI) is potentially",
+      "score": 0.2484,
+      "paper_url": "https://www.sciencedirect.com/science/article/pii/S0730725X19307556",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=Artificial%20intelligence%20in%20medical%20imaging%20Gore",
+      "download_link": "https://arxiv.org/pdf/2311.02115v2"
+    },
+    {
+      "title": "Artificial intelligence in medical imaging of the liver",
+      "authors": [
+        "LQ Zhou",
+        "JY Wang",
+        "SY Yu",
+        "GG Wu"
+      ],
+      "citations": 326,
+      "year": 2019,
+      "abstract": "Artificial intelligence (AI), particularly deep learning algorithms, is gaining  in image-recognition  tasks. They can automatically make a quantitative assessment of complex medical image",
+      "score": 0.2433,
+      "paper_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6378542/",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=Artificial%20intelligence%20in%20medical%20imaging%20of%20the%20liver%20Zhou%20Wang",
+      "download_link": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6378542/"
+    },
+    {
+      "title": "Clinical Applications of Artificial Intelligence in Medical Imaging and Image Processing—A Review",
+      "authors": [
+        "R. Obuchowicz",
+        "Michał Strzelecki",
+        "A. Piórkowski"
+      ],
+      "citations": 98,
+      "year": 2024,
+      "abstract": "We attempt to define what is necessary to construct an Artificial Scientist, explore and evaluate several approaches to artificial general intelligence (AGI) which may facilitate this, conclude that a unified or hybrid approach is necessary and explore two theories that satisfy this requirement to some degree.",
+      "score": 0.2399,
+      "paper_url": "https://www.semanticscholar.org/paper/c340421c3a8b8c1ca13ef1f2dae20ef4fd88c6ba",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=Clinical%20Applications%20of%20Artificial%20Intelligence%20in%20Medical%20Imaging%20and%20Image%20Processing%E2%80%94A%20Review%20Obuchowicz%20Strzelecki",
+      "download_link": "https://www.mdpi.com/2072-6694/16/10/1870/pdf?version=1715692513"
+    },
+    {
+      "title": "The role of artificial intelligence in medical imaging research",
+      "authors": [
+        "X Tang"
+      ],
+      "citations": 307,
+      "year": 2019,
+      "abstract": "medical imaging research. AI is the essential boosting power of processing massive number  of medical images  to review the history of AI in medical imaging research, the current role,",
+      "score": 0.2382,
+      "paper_url": "https://academic.oup.com/bjro/article-abstract/2/1/20190031/7240329",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=The%20role%20of%20artificial%20intelligence%20in%20medical%20imaging%20research%20Tang",
+      "download_link": "https://academic.oup.com/bjro/article/2/1/20190031/7240329"
+    },
+    {
+      "title": "Explainable artificial intelligence for medical imaging systems using deep learning: a comprehensive review",
+      "authors": [
+        "Essam H. Houssein",
+        "Amr M. Gamal",
+        "Eman M. G. Younis",
+        "Ebtsam Mohamed"
+      ],
+      "citations": 49,
+      "year": 2025,
+      "abstract": "We attempt to define what is necessary to construct an Artificial Scientist, explore and evaluate several approaches to artificial general intelligence (AGI) which may facilitate this, conclude that a unified or hybrid approach is necessary and explore two theories that satisfy this requirement to some degree.",
+      "score": 0.2354,
+      "paper_url": "https://www.semanticscholar.org/paper/744a22ef78030aecdeaa56770f9b72a65b84c307",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=Explainable%20artificial%20intelligence%20for%20medical%20imaging%20systems%20using%20deep%20learning%3A%20a%20comprehensive%20review%20Houssein%20Gamal",
+      "download_link": "https://arxiv.org/pdf/2110.01831v1"
+    },
+    {
+      "title": "An intelligent future for medical imaging: a market outlook on artificial intelligence for medical imaging",
+      "authors": [
+        "A Alexander",
+        "A Jiang",
+        "C Ferreira",
+        "D Zurkiya"
+      ],
+      "citations": 152,
+      "year": 2020,
+      "abstract": "the growth of AI in medical imaging. We highlight progress  medical imaging published in  this journal, when we identified AI as an important trend that would shape the medical imaging",
+      "score": 0.2262,
+      "paper_url": "https://www.sciencedirect.com/science/article/pii/S1546144019308634",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=An%20intelligent%20future%20for%20medical%20imaging%3A%20a%20market%20outlook%20on%20artificial%20intelligence%20for%20medical%20imaging%20Alexander%20Jiang",
+      "download_link": "https://www.sciencedirect.com/science/article/pii/S1546144019308634"
+    },
+    {
+      "title": "Bias in artificial intelligence for medical imaging: fundamentals, detection, avoidance, mitigation, challenges, ethics, and prospects",
+      "authors": [
+        "B. Koçak",
+        "A. Ponsiglione",
+        "A. Stanzione",
+        "Christian Bluethgen",
+        "J. Santinha",
+        "L. Ugga",
+        "Merel Huisman",
+        "M. Klontzas",
+        "Roberto Cannella",
+        "Renato Cuocolo"
+      ],
+      "citations": 174,
+      "year": 2024,
+      "abstract": "ABSTRACT Although artificial intelligence (AI) methods hold promise for medical imaging-based prediction tasks, their integration into medical practice may present a double-edged sword due to bias (i.e., systematic errors). AI algorithms have the potential to mitigate cognitive biases in human interpretation, but extensive research has highlighted the tendency of AI systems to internalize biases within their model. This fact, whether intentional or not, may ultimately lead to unintentional consequences in the clinical setting, potentially compromising patient outcomes. This concern is particularly important in medical imaging, where AI has been more progressively and widely embraced than any other medical field. A comprehensive understanding of bias at each stage of the AI pipeline is therefore essential to contribute to developing AI solutions that are not only less biased but also widely applicable. This international collaborative review effort aims to increase awareness within the medical imaging community about the importance of proactively identifying and addressing AI bias to prevent its negative consequences from being realized later. The authors began with the fundamentals of bias by explaining its different definitions and delineating various potential sources. Strategies for detecting and identifying bias were then outlined, followed by a review of techniques for its avoidance and mitigation. Moreover, ethical dimensions, challenges encountered, and prospects were discussed.",
+      "score": 0.2241,
+      "paper_url": "https://www.semanticscholar.org/paper/a42554ce8fc8a3c3b6235abac522bc2a27158281",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=Bias%20in%20artificial%20intelligence%20for%20medical%20imaging%3A%20fundamentals%2C%20detection%2C%20avoidance%2C%20mitigation%2C%20challenges%2C%20ethics%2C%20and%20prospects%20Ko%C3%A7ak%20Ponsiglione",
+      "download_link": "https://d2v96fxpocvxx.cloudfront.net/new/beb8919b-f013-4ea1-b1c8-40332e840fe1/articles/dir.2024.242854/DIR-2024-2854.pdf"
+    },
+    {
+      "title": "Current challenges of implementing artificial intelligence in medical imaging",
+      "authors": [
+        "SN Saw",
+        "KH Ng"
+      ],
+      "citations": 145,
+      "year": 2022,
+      "abstract": "The idea of using artificial intelligence (AI) in medical  overview of current AI challenges in  medical imaging with an ultimate aim to  in implementing AI in medical imaging, supported with",
+      "score": 0.2224,
+      "paper_url": "https://www.sciencedirect.com/science/article/pii/S1120179722019962",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=Current%20challenges%20of%20implementing%20artificial%20intelligence%20in%20medical%20imaging%20Saw%20Ng",
+      "download_link": "https://www.physicamedica.com/article/S1120-1797(22)01996-2/pdf"
+    },
+    {
+      "title": "Artificial intelligence in medical imaging: opportunities, applications and risks",
+      "authors": [
+        "ER Ranschaert",
+        "S Morozov",
+        "PR Algra"
+      ],
+      "citations": 268,
+      "year": 2019,
+      "abstract": "evolution in the application of artificial intelligence (AI) within  new and emerging technologies  on medical imaging. After an  of AI in computing science and medical image computing is",
+      "score": 0.2209,
+      "paper_url": "https://link.springer.com/book/10.1007/978-3-319-94878-2?fbclid=IwAR2YUJp3cobfQnfDg6O-qofNREKKOVrrYrXD30kr0zKLfE2xYI6h8PNOpRk",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=Artificial%20intelligence%20in%20medical%20imaging%3A%20opportunities%2C%20applications%20and%20risks%20Ranschaert%20Morozov",
+      "download_link": "https://arxiv.org/pdf/2109.02722v2"
+    },
+    {
+      "title": "Artificial Intelligence in medical imaging practice: looking to the future",
+      "authors": [
+        "SJ Lewis",
+        "Z Gandomkar"
+      ],
+      "citations": 122,
+      "year": 2019,
+      "abstract": "AI is beginning to change medical imaging services and the innovations  machine learning,  will challenge the way medical imaging is delivered from workflow, image acquisition, image",
+      "score": 0.2068,
+      "paper_url": "https://onlinelibrary.wiley.com/doi/abs/10.1002/jmrs.369",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=Artificial%20Intelligence%20in%20medical%20imaging%20practice%3A%20looking%20to%20the%20future%20Lewis%20Gandomkar",
+      "download_link": "https://onlinelibrary.wiley.com/doi/full/10.1002/jmrs.369"
+    },
+    {
+      "title": "Artificial Intelligence, Medical Imaging, and Precision Medicine: Advances and Perspectives",
+      "authors": [
+        "L. Martí-Bonmatí"
+      ],
+      "citations": 2,
+      "year": 2024,
+      "abstract": "The role of artificial intelligence (AI) applied to medical imaging in developing and strengthening personalized medicine is described as a continuous process of improvement, a set of opportunities, and a professional challenge of enormous significance. This paper outlines the main processes in which AI is involved regarding imaging, including data preparation, image harmonization, automatic segmentation of organs and lesions, labeling, extraction of radiomic features, and the development of predictive clinical models. It will also address aspects related to the integration of these solutions into clinical practice to enhance accuracy and efficiency in the care process, diagnosis, and treatment, making it more personalized, efficient, and precise. Projects like PRIMAGE and CHAIMELEON highlight the transformative potential of AI and the fundamental role of interdisciplinary collaboration in realizing this potential, based on ongoing multiprofesional collaboration to address the ethical, regulatory, technical, and clinical challenges that accompany these advancements.",
+      "score": 0.1988,
+      "paper_url": "https://www.semanticscholar.org/paper/9939f47b6315eaa506915b0c59838482e888e076",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=Artificial%20Intelligence%2C%20Medical%20Imaging%2C%20and%20Precision%20Medicine%3A%20Advances%20and%20Perspectives%20Mart%C3%AD-Bonmat%C3%AD",
+      "download_link": "https://arxiv.org/pdf/2109.02722v2"
+    },
+    {
+      "title": "Artificial intelligence in medical imaging: From task-specific models to large-scale foundation models",
+      "authors": [
+        "Yueyan Bian",
+        "Jin Li",
+        "Chuyang Ye",
+        "Xiuqin Jia",
+        "Qi Yang"
+      ],
+      "citations": 24,
+      "year": 2025,
+      "abstract": "Abstract Artificial intelligence (AI), particularly deep learning, has demonstrated remarkable performance in medical imaging across a variety of modalities, including X-ray, computed tomography (CT), magnetic resonance imaging (MRI), ultrasound, positron emission tomography (PET), and pathological imaging. However, most existing state-of-the-art AI techniques are task-specific and focus on a limited range of imaging modalities. Compared to these task-specific models, emerging foundation models represent a significant milestone in AI development. These models can learn generalized representations of medical images and apply them to downstream tasks through zero-shot or few-shot fine-tuning. Foundation models have the potential to address the comprehensive and multifactorial challenges encountered in clinical practice. This article reviews the clinical applications of both task-specific and foundation models, highlighting their differences, complementarities, and clinical relevance. We also examine their future research directions and potential challenges. Unlike the replacement relationship seen between deep learning and traditional machine learning, task-specific and foundation models are complementary, despite inherent differences. While foundation models primarily focus on segmentation and classification, task-specific models are integrated into nearly all medical image analyses. However, with further advancements, foundation models could be applied to other clinical scenarios. In conclusion, all indications suggest that task-specific and foundation models, especially the latter, have the potential to drive breakthroughs in medical imaging, from image processing to clinical workflows.",
+      "score": 0.1946,
+      "paper_url": "https://www.semanticscholar.org/paper/5d537a7f86b5f46c70b5467c05fb57325d34d79c",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=Artificial%20intelligence%20in%20medical%20imaging%3A%20From%20task-specific%20models%20to%20large-scale%20foundation%20models%20Bian%20Li",
+      "download_link": "https://arxiv.org/pdf/2212.08228v2"
+    },
+    {
+      "title": "Artificial Intelligence Based Automated Medical Imaging Analysis and Interpretation",
+      "authors": [
+        "Sangeeta Jawar",
+        "Ramgopal Kashyap"
+      ],
+      "citations": 36,
+      "year": 2025,
+      "abstract": "Adding artificial intelligence (AI) to medical imaging has changed how diagnoses are made by making it possible to look at images, especially chest X-rays, more accurately and automatically. This study investigates how advanced AI techniques, such as deep learning and neural networks, can automate the assessment of the cardiothoracic ratio, a crucial indicator for identifying heart diseases. AI uses huge records and complicated formulas to make medical findings better, faster, and more consistent, so humans don't have to look them over as often. The study also examines the challenges that arise from combining AI, such as inaccurate data and errors, and emphasizes the importance of conducting comprehensive reviews to evaluate the effectiveness of these AI-powered solutions. This study shows how AI could greatly improve patient results by helping to find and diagnose cardiovascular diseases earlier using computerized medical image analysis.",
+      "score": 0.1911,
+      "paper_url": "https://www.semanticscholar.org/paper/013ae03be006dd9fb119d29f86c2f56ea0909642",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=Artificial%20Intelligence%20Based%20Automated%20Medical%20Imaging%20Analysis%20and%20Interpretation%20Jawar%20Kashyap",
+      "download_link": "https://arxiv.org/pdf/2109.02722v2"
+    },
+    {
+      "title": "Artificial Intelligence Medical Image-aided Diagnosis System for Risk Assessment of Adjacent Segment Degeneration after Lumbar Fusion Surgery.",
+      "authors": [
+        "Bin Dai",
+        "Xinyu Liang",
+        "Yan Dai",
+        "Xintian Ding"
+      ],
+      "citations": 4,
+      "year": 2025,
+      "abstract": "The existing assessment of adjacent segment degeneration (ASD) risk after lumbar fusion surgery focuses on a single type of clinical information or imaging manifestations. In the early stages, it is difficult to show obvious degeneration characteristics, and the patients' true risks cannot be fully revealed. The evaluation results based on imaging ignore the clinical symptoms and changes in quality of life of patients, limiting the understanding of the natural process of ASD and the comprehensive assessment of its risk factors, and hindering the development of effective prevention strategies. To improve the quality of postoperative management and effectively identify the characteristics of ASD, this paper studies the risk assessment of ASD after lumbar fusion surgery by combining the artificial intelligence (AI) medical image-aided diagnosis system. First, the collaborative attention mechanism is adopted to start with the extraction of single-modal features and fuse the multi-modal features of computed tomography (CT) and magnetic resonance imaging (MRI) images. Then, the similarity matrix is weighted to achieve the complementarity of multi-modal information, and the stability of feature extraction is improved through the residual network structure. Finally, the fully connected network (FCN) is combined with the multi-task learning framework to provide a more comprehensive assessment of the risk of ASD. The experimental analysis results show that compared with three advanced models, three dimensional-convolutional neural networks (3D-CNN), U-Net++, and deep residual networks (DRN), the accuracy of the model in this paper is 3.82%, 6.17%, and 6.68% higher respectively; the precision is 0.56%, 1.09%, and 4.01% higher respectively; the recall is 3.41%, 4.85%, and 5.79% higher respectively. The conclusion shows that the AI medical image-aided diagnosis system can help to accurately identify the characteristics of ASD and effectively assess the risks after lumbar fusion surgery.",
+      "score": 0.1652,
+      "paper_url": "https://www.semanticscholar.org/paper/e4f49c5bd5c085d599bbcd98152974a1203e37f8",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=Artificial%20Intelligence%20Medical%20Image-aided%20Diagnosis%20System%20for%20Risk%20Assessment%20of%20Adjacent%20Segment%20Degeneration%20after%20Lumbar%20Fusion%20Surgery.%20Dai%20Liang",
+      "download_link": "https://arxiv.org/pdf/2412.01496v2"
+    },
+    {
+      "title": "Identification of Known Use-Related Problems in Artificial Intelligence Medical Imaging Devices",
+      "authors": [
+        "Yuhao Chen",
+        "Shihui Ruan",
+        "K. Plant",
+        "Shimeng Du"
+      ],
+      "citations": 1,
+      "year": 2023,
+      "abstract": "As Artificial Intelligence (AI) advances, it is included into more and more medical device systems to carry out these systems’ intended functions. Given AI’s ability to learn from real-world use and its capability to continuously improve performance, manufacturers of medical devices are utilizing AI to innovate their products to better assist health care providers. However, like application of other types of medical devices, the application of AI in medical care might pose different types of potential risks to the patients, the users themselves, and to the use environment. For manufactures to successfully ensure the safety of AI medical devices, it is crucial to identify known problems by investigating use-related, user interface, and user interaction in-cidents that have occurred in comparable medical devices. The objective of this study is to identify potential use-related problems of DeepView® Wound Imaging System that assesses the healing potential of thermal burn wounds by analyzing multispectral images with an ML algorithm. We use a variety of sources of information on reports and recalls of medical devices that are associated with deaths, serious injuries and mal-functions. After examining relevant reports and recalls, 19 use-related problems were identified. An in-depth analysis was then conducted, considering each identified use-related problem and determining how it relates to the specific features and functionality of DeepView® Wound Imaging System as well as identifying patterns and commonalities among them. The information gained from this analysis can be beneficial in enhancing the safety of AI medical devices by providing a deeper understanding of the reasons for failure, to avoid similar issues in the future, and ultimately to improve patient safety and public health.",
+      "score": 0.1524,
+      "paper_url": "https://www.semanticscholar.org/paper/42f0af53e03871980054bbe807cfaba0dcb1c689",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=Identification%20of%20Known%20Use-Related%20Problems%20in%20Artificial%20Intelligence%20Medical%20Imaging%20Devices%20Chen%20Ruan",
+      "download_link": "https://arxiv.org/pdf/2204.10358v1"
+    }
+  ]
+}
