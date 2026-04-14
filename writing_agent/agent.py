@@ -2,8 +2,9 @@
 agent.py — Writing Agent  (LangChain + Groq)
 
 PUBLIC INTERFACE:
-    from writing_agent.agent import run_writing_agent
+    from writing_agent.agent import run_writing_agent, run_suggestion_agent
 
+    # ── Full section generation / improvement ──────────────────────────────
     result = run_writing_agent(
         document    = "existing section text, or empty string",
         instruction = "generate an introduction about RAG systems",
@@ -18,14 +19,30 @@ PUBLIC INTERFACE:
         }
     )
     # Returns: plain string
+
+    # ── Copilot-style suggestion (accept/reject) ───────────────────────────
+    suggestion = run_suggestion_agent(
+        document      = "full document so far",
+        target_text   = "The model was fine-tuned on",   # selected text, or ""
+        context       = {...},
+        suggestion_mode = "complete",    # "complete" | "improve" | "rephrase"
+    )
+    # Returns: {"original": str, "suggestion": str, "mode": str}
+    # or:      {"error": str}
 """
 
 import os
+import json
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_core.output_parsers import StrOutputParser
 
-from prompts import WRITING_PROMPT, build_prompt_values
+from prompts import (
+    WRITING_PROMPT,
+    SUGGESTION_PROMPT,
+    build_prompt_values,
+    build_suggestion_prompt_values,
+)
 from tools import (
     query_literature_context,
     format_prefetched_sources,
@@ -33,22 +50,29 @@ from tools import (
     inject_source_citations,
     extract_writing_preferences,
     validate_output,
+    build_suggestion_diff,
 )
 
 load_dotenv()
 
 # ─────────────────────────────────────────────
-# LANGCHAIN CHAIN SETUP
+# LLM SETUP
 # ─────────────────────────────────────────────
 
-_llm = ChatGroq(
-    model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
-    api_key=os.getenv("GROQ_API_KEY", ""),
-    temperature=0.3,
-    max_tokens=1500,
-)
+def _make_llm(temperature: float = 0.3, max_tokens: int = 1500) -> ChatGroq:
+    return ChatGroq(
+        model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+        api_key=os.getenv("GROQ_API_KEY", ""),
+        temperature=temperature,
+        max_tokens=max_tokens,
+    )
 
-_chain = WRITING_PROMPT | _llm | StrOutputParser()
+# Shared writing chain (generation / rephrase / improve)
+_writing_chain = WRITING_PROMPT | _make_llm(temperature=0.3) | StrOutputParser()
+
+# Suggestion chain uses lower temperature for tighter, more focused completions
+# and lower max_tokens because we only need one suggestion, not a full section.
+_suggestion_chain = SUGGESTION_PROMPT | _make_llm(temperature=0.2, max_tokens=400) | StrOutputParser()
 
 
 # ─────────────────────────────────────────────
@@ -56,49 +80,55 @@ _chain = WRITING_PROMPT | _llm | StrOutputParser()
 # ─────────────────────────────────────────────
 
 def _detect_operation(instruction: str, document: str) -> str:
-    """Auto-detect operation from instruction keywords."""
     lower = instruction.lower()
-
     if any(kw in lower for kw in ["rephrase", "rewrite", "reword", "paraphrase"]):
         return "rephrase"
-
     if any(kw in lower for kw in ["improve", "enhance", "fix", "correct",
                                     "polish", "proofread", "make formal",
                                     "make academic", "fix grammar"]):
         return "improve"
-
     if any(kw in lower for kw in ["write", "generate", "create", "draft",
                                     "compose", "produce", "expand", "add"]):
         return "generate"
-
     return "improve" if document.strip() else "generate"
 
 
+def _detect_suggestion_mode(selected_text: str, document: str) -> str:
+    """
+    Auto-detect the right suggestion mode when the caller passes mode=None.
+
+    Rules:
+      - No selected text + document ends mid-sentence  → "complete"
+      - Text selected (a word or sentence)              → "improve"
+      - Text selected (full paragraph or more)          → "rephrase"
+    """
+    if not selected_text or not selected_text.strip():
+        return "complete"
+    word_count = len(selected_text.split())
+    return "rephrase" if word_count > 40 else "improve"
+
+
 # ─────────────────────────────────────────────
-# LITERATURE CONTEXT BUILDER
+# LITERATURE CONTEXT BUILDER  (shared)
 # ─────────────────────────────────────────────
 
-def _get_literature_context(instruction: str, context: dict) -> tuple[str, list]:
+def _get_literature_context(query: str, context: dict) -> tuple[str, list]:
     """
-    Build the literature context string and raw sources list.
-    Returns: (literature_context_string, raw_sources_list)
+    Returns (formatted_string, raw_sources_list).
+    Prefers pre-fetched sources from the orchestrator over ChromaDB.
     """
-    # Flow B: orchestrator already passed sources
     pre_fetched = context.get("sources", [])
     if pre_fetched:
         return format_prefetched_sources(pre_fetched), pre_fetched
 
-    # Flow A: query ChromaDB
-    search_query = instruction
+    search_query = query
     if context.get("target_journal"):
         search_query += f" {context['target_journal']}"
-
-    lit_context = query_literature_context(search_query, top_k=5)
-    return lit_context, []
+    return query_literature_context(search_query, top_k=5), []
 
 
 # ─────────────────────────────────────────────
-# PUBLIC API
+# PUBLIC API — FULL SECTION WRITER
 # ─────────────────────────────────────────────
 
 def run_writing_agent(
@@ -108,30 +138,26 @@ def run_writing_agent(
     operation:   str = None,
 ) -> str:
     """
-    Main entry point called by the orchestrator.
+    Main entry point for full section generation, improvement, or rephrasing.
 
     Args:
         document    : Current section text. Empty string = write from scratch.
         instruction : What to do, e.g. "Write an introduction about transformers"
         context     : Writing preferences + optional sources.
         operation   : Optional override ("generate"|"rephrase"|"improve").
-                      If None, auto-detected from instruction.
+                      Auto-detected from instruction keywords if None.
 
     Returns:
-        Plain string. Never raises — returns "[ERROR] ..." on failure.
+        Plain string — publication-ready prose.
+        Returns "[ERROR] ..." on any failure.
     """
-
-    # 1. Normalise context
     prefs = extract_writing_preferences(context)
 
-    # 2. Detect operation
     op = operation if operation in ("generate", "rephrase", "improve") \
          else _detect_operation(instruction, document)
 
-    # 3. Get literature context
     lit_context, raw_sources = _get_literature_context(instruction, prefs)
 
-    # 4. Build prompt values
     values = build_prompt_values(
         document=document,
         instruction=instruction,
@@ -140,20 +166,16 @@ def run_writing_agent(
         literature_context=lit_context,
     )
 
-    # 5. Run LangChain chain
     try:
-        raw_output = _chain.invoke(values)
+        raw_output = _writing_chain.invoke(values)
     except Exception as e:
         return f"[ERROR] LLM call failed: {e}. Check GROQ_API_KEY in your .env file."
 
-    # 6. Clean output
     cleaned = clean_llm_output(raw_output)
 
-    # 7. Validate
     if not validate_output(cleaned):
         return f"[ERROR] Agent returned an unusable response. Raw: {raw_output[:200]}"
 
-    # 8. Inject citations (only when orchestrator passed raw sources)
     if raw_sources:
         cleaned = inject_source_citations(
             text=cleaned,
@@ -162,6 +184,90 @@ def run_writing_agent(
         )
 
     return cleaned
+
+
+# ─────────────────────────────────────────────
+# PUBLIC API — COPILOT-STYLE SUGGESTION
+# ─────────────────────────────────────────────
+
+def run_suggestion_agent(
+    document:        str,
+    context:         dict,
+    target_text:     str  = "",
+    suggestion_mode: str  = None,
+) -> dict:
+    """
+    Generate a single inline AI suggestion for the researcher to accept or reject.
+
+    This is the backend function for the copilot-like feature. The frontend calls this
+    after a debounce period and displays the result as ghost text or a diff overlay.
+
+    Args:
+        document        : Full document text so far (provides coherence context).
+        context         : Writing preferences dict (same shape as run_writing_agent).
+        target_text     : The specific text to work on.
+                            - Empty string → complete the document from where it ends.
+                            - A sentence or two → improve/rephrase inline.
+                            - A selected paragraph → rephrase.
+        suggestion_mode : "complete" | "improve" | "rephrase" | None (auto-detect).
+
+    Returns:
+        On success:
+            {
+              "original":   str,   # the text that was changed (empty for completions)
+              "suggestion": str,   # the AI-generated replacement or continuation
+              "mode":       str,   # which mode was used
+              "diff":       list,  # [{"type": "equal"|"remove"|"add", "text": str}, ...]
+            }
+        On failure:
+            {"error": str}
+    """
+    prefs = extract_writing_preferences(context)
+
+    mode = suggestion_mode if suggestion_mode in ("complete", "improve", "rephrase") \
+           else _detect_suggestion_mode(target_text, document)
+
+    # For suggestions we only pull a small context window, not full top_k=5
+    lit_context, _ = _get_literature_context(target_text or document[-300:], prefs)
+    # Limit literature context to 2 sources max — suggestions should be quick
+    lit_lines  = lit_context.split("\n\n")[:2]
+    lit_context = "\n\n".join(lit_lines)
+
+    values = build_suggestion_prompt_values(
+        document=document,
+        target_text=target_text,
+        context=prefs,
+        suggestion_mode=mode,
+        literature_context=lit_context,
+    )
+
+    try:
+        raw_output = _suggestion_chain.invoke(values)
+    except Exception as e:
+        return {"error": f"LLM call failed: {e}"}
+
+    # Parse the JSON the LLM was instructed to return
+    try:
+        cleaned = clean_llm_output(raw_output)
+        # Strip any accidental markdown fences (model sometimes adds them anyway)
+        cleaned = cleaned.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
+        parsed  = json.loads(cleaned)
+
+        original   = parsed.get("original",   "")
+        suggestion = parsed.get("suggestion", "")
+
+        if not suggestion or not suggestion.strip():
+            return {"error": f"Empty suggestion. Raw output: {raw_output[:200]}"}
+
+        return {
+            "original":   original,
+            "suggestion": suggestion,
+            "mode":       mode,
+            "diff":       build_suggestion_diff(original, suggestion),
+        }
+
+    except (json.JSONDecodeError, KeyError) as e:
+        return {"error": f"Could not parse suggestion JSON: {e}. Raw: {raw_output[:300]}"}
 
 
 # ─────────────────────────────────────────────
@@ -180,100 +286,34 @@ if __name__ == "__main__":
         "sources":        [],
     }
 
-    tests = [
-        {
-            "name":        "TEST 1 — GENERATE from scratch",
-            "document":    "",
-            "instruction": "Write an introduction for a paper about human-in-the-loop AI writing assistants for researchers.",
-        },
-        {
-            "name":        "TEST 2 — REPHRASE existing text",
-            "document":    "AI is useful. It helps people write papers. The system is good.",
-            "instruction": "Rephrase this text to make it more formal and academic.",
-        },
-        {
-            "name":        "TEST 3 — IMPROVE a methodology paragraph",
-            "document":    "The methodology uses a transformer model fine-tuned on academic data.",
-            "instruction": "Improve this methodology paragraph with more technical detail.",
-        },
-    ]
+    print("\n" + "=" * 60)
+    print("TEST — GENERATE a structured Introduction")
+    print("=" * 60)
+    result = run_writing_agent(
+        document="",
+        instruction="Write an introduction for a paper about human-in-the-loop AI writing assistants for researchers.",
+        context=ctx,
+    )
+    print(result)
 
-    for t in tests:
-        print("\n" + "=" * 60)
-        print(t["name"])
-        print("=" * 60)
-        result = run_writing_agent(
-            document=t["document"],
-            instruction=t["instruction"],
-            context=ctx,
-        )
-        print(result)
-# ─────────────────────────────────────────────
-# EXTRA TESTS — different user contexts
-# ─────────────────────────────────────────────
+    print("\n" + "=" * 60)
+    print("TEST — SUGGESTION: improve a weak sentence")
+    print("=" * 60)
+    s = run_suggestion_agent(
+        document="This paper presents a new method for academic writing assistance using LLMs.",
+        target_text="The method works well on all datasets.",
+        context=ctx,
+        suggestion_mode="improve",
+    )
+    print(s)
 
-print("\n" + "=" * 60)
-print("TEST 4 — French student, APA style, no journal")
-print("=" * 60)
-result = run_writing_agent(
-    document="",
-    instruction="Write an introduction about deep learning in medical imaging.",
-    context={
-        "writing_style":  "academic",
-        "tone":           "formal",
-        "language":       "French",       # ← different language
-        "citation_style": "APA",          # ← different citation style
-        "grounded_only":  False,
-        "sources":        [],
-    }
-)
-print(result)
-
-print("\n" + "=" * 60)
-print("TEST 5 — Orchestrator passes sources from Literature Agent")
-print("=" * 60)
-result = run_writing_agent(
-    document="",
-    instruction="Write a related work section about transformer models.",
-    context={
-        "writing_style":  "academic",
-        "tone":           "formal",
-        "language":       "English",
-        "citation_style": "IEEE",
-        "grounded_only":  True,           # ← STRICT: only use provided sources
-        "sources": [                      # ← literature agent passed these
-            {
-                "title":       "Attention is All You Need",
-                "authors":     "Vaswani et al.",
-                "year":        "2017",
-                "abstract":    "We propose the Transformer, a model architecture "
-                               "based entirely on attention mechanisms, dispensing "
-                               "with recurrence and convolutions entirely.",
-                "source_file": "vaswani2017.pdf",
-                "page":        1,
-            },
-            {
-                "title":       "BERT: Pre-training of Deep Bidirectional Transformers",
-                "authors":     "Devlin et al.",
-                "year":        "2019",
-                "abstract":    "We introduce BERT, which stands for Bidirectional "
-                               "Encoder Representations from Transformers, designed "
-                               "to pre-train deep bidirectional representations.",
-                "source_file": "devlin2019.pdf",
-                "page":        1,
-            },
-        ],
-    }
-)
-print(result)
-
-print("\n" + "=" * 60)
-print("TEST 6 — Force operation override (ignore instruction keywords)")
-print("=" * 60)
-result = run_writing_agent(
-    document="The results show that the model performed well on all datasets.",
-    instruction="Look at this and do something with it.",  # ambiguous instruction
-    context={"grounded_only": False},
-    operation="improve",   # ← force it explicitly instead of auto-detect
-)
-print(result)
+    print("\n" + "=" * 60)
+    print("TEST — SUGGESTION: complete a half-sentence")
+    print("=" * 60)
+    s = run_suggestion_agent(
+        document="In recent years, large language models have",
+        target_text="",  # cursor at end, no selection
+        context=ctx,
+        suggestion_mode="complete",
+    )
+    print(s)
