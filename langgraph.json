@@ -1,0 +1,9 @@
+{
+    "dependencies": [
+        "."
+    ],
+    "graphs": {
+        "cowritex": "orchestrator.studio:graph"
+    },
+    "env": ".env"
+}
