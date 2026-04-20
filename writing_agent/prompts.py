@@ -30,11 +30,13 @@ RULES YOU MUST FOLLOW:
 8. Always write in the specified language.
 9. When writing a named section (abstract, introduction, methodology …), follow the
    structural blueprint provided for that section exactly. Do not skip sub-parts.
+10. If SURROUNDING SECTIONS are provided, do NOT repeat information already covered
+    in the preceding section, and do NOT pre-empt content belonging to the next section.
+    Each section must add unique value.
 """
 
 # ─────────────────────────────────────────────
-# SYSTEM PROMPT  (suggestion agent — kept short
-#                so the LLM stays focused)
+# SYSTEM PROMPT  (suggestion agent)
 # ─────────────────────────────────────────────
 
 SUGGESTION_SYSTEM_PROMPT = """You are a real-time inline writing assistant for CoWriteX, \
@@ -49,14 +51,13 @@ STRICT RULES:
    - "suggestion": your improved or completed text, same approximate length.
 3. Do not introduce new claims unsupported by the provided context.
 4. Never explain what you changed. Never apologise. Output JSON only.
+5. If SURROUNDING SECTIONS are provided, do NOT repeat information already covered
+   in the preceding section, and do NOT pre-empt the next section.
 """
 
 # ─────────────────────────────────────────────
 # SECTION STRUCTURE BLUEPRINTS
 # ─────────────────────────────────────────────
-# Each value is a tuple of (structural_blueprint, style_notes).
-# The blueprint is injected verbatim into the prompt so the LLM
-# must follow the numbered outline.
 
 SECTION_BLUEPRINTS: dict[str, tuple[str, str]] = {
     "abstract": (
@@ -150,16 +151,38 @@ No new information. Keep under 200 words. Present tense throughout.""",
 }
 
 
-def get_section_blueprint(instruction: str, document: str) -> tuple[str, str]:
+def get_section_blueprint(
+    instruction:    str,
+    document:       str,
+    target_section: str = "",
+) -> tuple[str, str]:
     """
-    Detect the target section from the instruction/document text and
-    return (blueprint_text, style_notes).
-    Returns ("", "") if no section is detected.
+    Detect the target section and return (blueprint_text, style_notes).
+
+    Priority order:
+      1. Explicit `target_section` argument (already normalised by agent.py)
+      2. Section keyword found in the instruction text
+      3. Section keyword found at the start of the document
+      4. ("", "") — no blueprint matched
     """
-    combined = (instruction + " " + document[:300]).lower()
+    # 1. Explicit section wins
+    if target_section and target_section.strip():
+        key = target_section.strip().lower()
+        if key in SECTION_BLUEPRINTS:
+            return SECTION_BLUEPRINTS[key]
+
+    # 2. Scan instruction
+    instr_lower = instruction.lower()
     for section_key, (blueprint, style) in SECTION_BLUEPRINTS.items():
-        if section_key in combined:
+        if section_key in instr_lower:
             return blueprint, style
+
+    # 3. Scan beginning of document
+    doc_lower = document[:300].lower()
+    for section_key, (blueprint, style) in SECTION_BLUEPRINTS.items():
+        if section_key in doc_lower:
+            return blueprint, style
+
     return "", ""
 
 
@@ -176,6 +199,8 @@ WRITING PREFERENCES:
 {journal_line}
 {grounding_line}
 
+TARGET SECTION: {target_section_label}
+
 OPERATION: {operation_label}
 
 {section_block}
@@ -186,6 +211,8 @@ INSTRUCTION:
 {document_block}
 
 {literature_block}
+
+{surrounding_block}
 
 Output ONLY the requested text. No preamble, no explanations.\
 """
@@ -207,8 +234,8 @@ WRITING PREFERENCES:
 - Language: {language}
 {journal_line}
 
+TARGET SECTION: {target_section_label}
 SUGGESTION MODE: {suggestion_mode}
-{section_hint}
 
 FULL DOCUMENT CONTEXT (for coherence — do NOT reproduce verbatim):
 \"\"\"
@@ -221,6 +248,8 @@ TARGET TEXT TO WORK ON:
 \"\"\"
 
 {literature_block}
+
+{surrounding_block}
 
 Return ONLY a valid JSON object with keys "original" and "suggestion".\
 """
@@ -236,11 +265,13 @@ SUGGESTION_PROMPT = ChatPromptTemplate.from_messages([
 # ─────────────────────────────────────────────
 
 def build_prompt_values(
-    document: str,
-    instruction: str,
-    context: dict,
-    operation: str,
-    literature_context: str = "",
+    document:            str,
+    instruction:         str,
+    context:             dict,
+    operation:           str,
+    literature_context:  str  = "",
+    target_section:      str  = "",   # NEW
+    surrounding_context: str  = "",   # NEW
 ) -> dict:
     """Build the dict of values for WRITING_PROMPT."""
 
@@ -250,6 +281,12 @@ def build_prompt_values(
         "improve":  "IMPROVE  — Enhance quality, clarity, coherence, and academic level.",
     }
     operation_label = labels.get(operation, labels["generate"])
+
+    # Section label for prompt display
+    target_section_label = (
+        target_section.upper() if target_section
+        else "(auto-detect from instruction)"
+    )
 
     # Document block
     if document and document.strip():
@@ -272,8 +309,8 @@ def build_prompt_values(
     else:
         literature_block = "(No literature sources provided — write without citations.)"
 
-    # Section blueprint
-    blueprint, style_notes = get_section_blueprint(instruction, document)
+    # Section blueprint — explicit section takes priority
+    blueprint, style_notes = get_section_blueprint(instruction, document, target_section)
     if blueprint:
         section_block = (
             f"SECTION STRUCTURE — follow this blueprint exactly:\n{blueprint}\n"
@@ -282,49 +319,44 @@ def build_prompt_values(
     else:
         section_block = ""
 
-    journal = context.get("target_journal", "")
-    journal_line = f"- Target journal : {journal}" if journal else ""
+    # Surrounding context block
+    surrounding_block = surrounding_context.strip() if surrounding_context else ""
+
+    journal       = context.get("target_journal", "")
+    journal_line  = f"- Target journal : {journal}" if journal else ""
     grounding_line = (
         "- Grounding      : STRICT — only use facts from the provided sources."
         if context.get("grounded_only", True) else ""
     )
 
     return {
-        "writing_style":    context.get("writing_style",  "academic"),
-        "tone":             context.get("tone",            "formal"),
-        "language":         context.get("language",        "English"),
-        "citation_style":   context.get("citation_style",  "APA"),
-        "journal_line":     journal_line,
-        "grounding_line":   grounding_line,
-        "section_block":    section_block,
-        "operation_label":  operation_label,
-        "instruction":      instruction.strip(),
-        "document_block":   document_block,
-        "literature_block": literature_block,
+        "writing_style":        context.get("writing_style",  "academic"),
+        "tone":                 context.get("tone",            "formal"),
+        "language":             context.get("language",        "English"),
+        "citation_style":       context.get("citation_style",  "APA"),
+        "journal_line":         journal_line,
+        "grounding_line":       grounding_line,
+        "target_section_label": target_section_label,
+        "section_block":        section_block,
+        "operation_label":      operation_label,
+        "instruction":          instruction.strip(),
+        "document_block":       document_block,
+        "literature_block":     literature_block,
+        "surrounding_block":    surrounding_block,
     }
 
 
 def build_suggestion_prompt_values(
-    document: str,
-    target_text: str,
-    context: dict,
-    suggestion_mode: str,
-    literature_context: str = "",
+    document:            str,
+    target_text:         str,
+    context:             dict,
+    suggestion_mode:     str,
+    literature_context:  str  = "",
+    target_section:      str  = "",   # NEW
+    surrounding_context: str  = "",   # NEW
 ) -> dict:
-    """
-    Build the dict of values for SUGGESTION_PROMPT.
+    """Build the dict of values for SUGGESTION_PROMPT."""
 
-    Args:
-        document        : Full document so far (for coherence context).
-        target_text     : The specific text to complete / improve / rephrase.
-                          Empty string means inline completion at cursor.
-        context         : Writing preferences dict.
-        suggestion_mode : "complete" | "improve" | "rephrase"
-        literature_context : Pre-formatted source string (optional).
-
-    Returns:
-        Dict — pass directly to suggestion_chain.invoke(...)
-    """
     mode_descriptions = {
         "complete":  "COMPLETE — continue the sentence or paragraph naturally from where it ends.",
         "improve":   "IMPROVE  — enhance academic quality, clarity, and precision of the target text.",
@@ -332,31 +364,34 @@ def build_suggestion_prompt_values(
     }
     mode_label = mode_descriptions.get(suggestion_mode, mode_descriptions["improve"])
 
-    # Detect section for a helpful hint
-    blueprint, _ = get_section_blueprint(document[:500], "")
-    section_hint = (
-        f"SECTION CONTEXT: This text appears in the {_detect_section_from_doc(document)} section.\n"
-        if _detect_section_from_doc(document)
-        else ""
+    # Section label
+    target_section_label = (
+        target_section.upper() if target_section
+        else _detect_section_from_doc(document) or "(unknown section)"
     )
 
+    # Literature block
     if literature_context and literature_context.strip():
         lit_block = f"RELEVANT SOURCES (use for grounding if applicable):\n{literature_context.strip()}"
     else:
         lit_block = ""
 
+    # Surrounding context block
+    surrounding_block = surrounding_context.strip() if surrounding_context else ""
+
     journal = context.get("target_journal", "")
 
     return {
-        "writing_style":     context.get("writing_style", "academic"),
-        "tone":              context.get("tone",           "formal"),
-        "language":          context.get("language",       "English"),
-        "journal_line":      f"- Target journal: {journal}" if journal else "",
-        "suggestion_mode":   mode_label,
-        "section_hint":      section_hint,
-        "document_context":  document[:1500] if document else "(empty document)",
-        "target_text":       target_text if target_text else "(write a continuation from the document above)",
-        "literature_block":  lit_block,
+        "writing_style":        context.get("writing_style", "academic"),
+        "tone":                 context.get("tone",           "formal"),
+        "language":             context.get("language",       "English"),
+        "journal_line":         f"- Target journal: {journal}" if journal else "",
+        "target_section_label": target_section_label,
+        "suggestion_mode":      mode_label,
+        "document_context":     document[:1500] if document else "(empty document)",
+        "target_text":          target_text if target_text else "(write a continuation from the document above)",
+        "literature_block":     lit_block,
+        "surrounding_block":    surrounding_block,
     }
 
 
