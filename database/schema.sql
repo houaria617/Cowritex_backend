@@ -1,0 +1,2 @@
+--Raw SQL — all app tables definitions
+-- projects, documents, edit_history, sources, hitl_events

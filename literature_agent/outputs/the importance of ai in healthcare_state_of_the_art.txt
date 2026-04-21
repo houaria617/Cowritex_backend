@@ -1,0 +1,30 @@
+**What is Known**
+
+AI’s contribution to healthcare is quantifiably documented in diagnostic-imaging output: the annual publication count on AI in diagnostic imaging rose from “about 100–150 per year in 2007–2008 to 1000–1100 per year in 2017–2018” (Xiaoli Tang, 2020).  Within radiation oncology, AI is already embedded in tumour delineation, segmentation, and adaptive-treatment monitoring (Xiaoli Tang, 2020).  Deep-learning systems avoid manual feature engineering and instead “progressively extract higher level features from raw image input,” a capability that became practical only after the recent “enormous number of medical images” and the advent of GPU/TPU hardware (Xiaoli Tang, 2020).  Beyond imaging, AI is reported to accelerate drug discovery by screening “large databases of potential drug compounds” and predicting body interactions (Iram Fatima et al., 2023), while AI chatbots handle administrative tasks such as appointment scheduling, ostensibly freeing clinicians for patient care (Iram Fatima et al., 2023).  Telemedicine applications extend access to “remote areas,” providing “real-time communication with healthcare professionals” (Iram Fatima et al., 2023).
+
+**What is Debated**
+
+No direct numerical contradictions appear across the chunks, but a fundamental, still-unresolved question is whether AI could “replace clinicians entirely.”  The authors explicitly answer “we believe it will not,” arguing that medicine is “art, not science” and that AI will “continue to underperform human level accuracy in medical decision making” (Xiaoli Tang, 2020).  Ethical and legal issues—discrimination against race, gender, or socioeconomic status; opacity of decision logic; and potential safety harms—are flagged as unresolved risks rather than settled debates (Iram Fatima et al., 2023).
+
+**Methodologies Used**
+
+The imaging literature relies on automated pattern-recognition and radiomics: “extraction of a large number of image features from radiation images with a high-throughput approach” (Xiaoli Tang, 2020).  Traditional machine-learning studies from the 1980s onward required users to “predefine explicit parameters and features … based on expert knowledge,” whereas contemporary deep-learning models learn features implicitly through multilayer neural networks [CHUNK 3; CHUNK 9].  No specific sample sizes, statistical tests, or performance metrics are supplied in any chunk.
+
+**Research Gaps**
+
+Several limitations are explicitly stated or strongly implied:
+
+- Data scarcity and privacy: AI is “constrained by a lack of high quality, high volume, longitudinal, outcomes data,” compounded by the “competing need for strict privacy protection”; distributed-learning countermeasures remain vulnerable to information-leakage attacks (Xiaoli Tang, 2020).  
+- Standardisation: “How to organize the data generated from different practices in a more standard way is a big challenge” and “might deserve to be a major research field” (Xiaoli Tang, 2020).  
+- Ethical implementation: transparency, bias mitigation, and safety testing are listed as unmet requirements before widespread clinical deployment (Iram Fatima et al., 2023).  
+- Clinical integration: long-term evidence that AI improves patient-level outcomes or lowers healthcare costs is not provided; the assertion that personalisation “can result in improved patient results and potentially lower healthcare expenses” remains qualitative (Iram Fatima et al., 2023).
+
+References  
+[1] Source: CHUNK 6 (no page number)  
+[2] Source: CHUNK 3 (no page number)  
+[3] Source: CHUNK 5 (no page number)  
+[4] Source: CHUNK 7 (no page number)  
+[5] Source: CHUNK 9 (no page number)  
+[6] Source: CHUNK 10 (no page number)
+
+---

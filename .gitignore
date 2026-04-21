@@ -1,0 +1,85 @@
+# Files Git should ignore
+# .env, __pycache__, .venv, *.pyc, chroma_db/
+# =========================
+# Environment & Secrets
+# =========================
+.env
+.env.local
+.env.*.local
+
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+.Python
+
+# =========================
+# Virtual environments
+# =========================
+.venv/
+venv/
+env/
+
+# =========================
+# uv
+# =========================
+.uv/
+
+# =========================
+# Database
+# =========================
+*.db
+*.sqlite
+*.sqlite3
+
+# =========================
+# Vector store (ChromaDB)
+# =========================
+chroma_db/
+.chroma/
+
+# =========================
+# IDE & editors
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# =========================
+# Logs
+# =========================
+*.log
+logs/
+
+# =========================
+# Testing
+# =========================
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# =========================
+# Build
+# =========================
+dist/
+build/
+*.egg-info/
+
+# =========================
+# Jupyter notebooks checkpoints
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# Uploaded files & exports
+# =========================
+uploads/
+exports/
+figures/
