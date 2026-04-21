@@ -1,3 +1,0 @@
-Vaswani, A., et al. (2017). Attention is All You Need. Advances in Neural Information Processing Systems.
-Smith, J., & Doe, A. (2023). Transformer-based Models for Scientific Writing Assistance. arXiv:0000.00001.
-Lewis, P., et al. (2020). Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks. Advances in Neural Information Processing Systems.
