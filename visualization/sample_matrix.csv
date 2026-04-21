@@ -1,0 +1,6 @@
+Model,Precision,Recall,F1,Accuracy
+Model_A,0.92,0.88,0.90,0.91
+Model_B,0.85,0.82,0.83,0.84
+Model_C,0.78,0.75,0.76,0.77
+Model_D,0.95,0.93,0.94,0.95
+Model_E,0.70,0.68,0.69,0.71
