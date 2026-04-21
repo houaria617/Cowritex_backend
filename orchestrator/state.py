@@ -19,6 +19,7 @@ class GraphState(TypedDict):
 
     # ── Routing ──
     intent: Literal["write", "literature", "visualize", "chat", "unknown"]
+    intents: list[str]           # NEW — e.g. ["write", "literature"]
     last_agent: Optional[str]          # "writing" | "literature" | "visualize"
 
     # ── Input ──
@@ -26,6 +27,7 @@ class GraphState(TypedDict):
     instruction: Optional[str]         # cleaned version from intent classifier
 
     # ── Agent output ──
+    agent_outputs: dict         # NEW — {"write": "...", "literature": "..."}
     agent_output: Optional[str]        # text shown to researcher at HITL
 
     # ── HITL ──
