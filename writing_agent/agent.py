@@ -44,13 +44,13 @@ from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_core.output_parsers import StrOutputParser
 
-from prompts import (
+from writing_agent.prompts import (
     WRITING_PROMPT,
     SUGGESTION_PROMPT,
     build_prompt_values,
     build_suggestion_prompt_values,
 )
-from tools import (
+from writing_agent.tools import (
     query_literature_context,
     format_prefetched_sources,
     clean_llm_output,

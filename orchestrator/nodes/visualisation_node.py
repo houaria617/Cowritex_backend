@@ -1,6 +1,8 @@
 """
 orchestrator/nodes/visualisation_node.py
+Uses the real visualization module (charts.py, tables.py, export.py).
 """
+
 from __future__ import annotations
 import json
 import logging
@@ -17,117 +19,39 @@ _VIZ_SYSTEM = """You are a data extraction assistant for a visualization tool.
 
 Given a user instruction, extract the visualization request and return ONLY JSON:
 {
-  "viz_type":   "<chart | table | figure>",
-  "title":      "<title for the visualization>",
-  "data":       { <extracted key-value data, or {} if not provided> },
-  "config": {
-    "chart_type":    "<bar | line | scatter | pie>",
-    "x_label":       "<x-axis label or null>",
-    "y_label":       "<y-axis label or null>",
-    "format":        "<png | pdf | latex>",
-    "color_scheme":  "<default | grayscale | IEEE_blue | custom>",
-    "export_size":   "<1920x1080 | A4 | column_width or null>",
-    "caption":       "<optional caption>",
-    "figure_type":   "<chart | table>"
+  "viz_type": "<chart | table>",
+  "title":    "<title for the visualization>",
+  "data": {
+    "x":      ["label1", "label2"],
+    "y":      [value1, value2]
   },
-  "details": "<any extra instructions>"
-}
-Respond with raw JSON only."""
-
-
-def visualisation_node(state: GraphState) -> dict:
-    # Lazy import — keeps the module importable even if visualization isn't installed
-    from visualization import generate_chart, generate_table, export_figure
-
-    project_id = state["project_id"]
-    section_id = state.get("section_id")
-    instruction = state.get("instruction") or state["user_message"]
-    prefs = state.get("preferences", {})
-    provider = prefs.get("llm_provider", "groq")
-
-    try:
-        llm = get_llm(provider, temperature=0.1)
-        response = llm.invoke([
-            SystemMessage(content=_VIZ_SYSTEM),
-            HumanMessage(content=instruction),
-        ])
-        parsed = json.loads(response.content.strip())
-    except Exception as exc:
-        logger.warning("Viz param extraction failed (%s), using defaults", exc)
-        parsed = {
-            "viz_type": "chart", "title": "Visualization",
-            "data": {}, "config": {"format": "png", "figure_type": "chart"},
-            "details": instruction,
-        }
-
-    viz_type = parsed.get("viz_type", "chart")
-    title = parsed.get("title", "Visualization")
-    data = parsed.get("data", {})
-    config = parsed.get("config", {})
-    details = parsed.get("details", "")
-
-    if state.get("hitl_feedback"):
-        config["details"] = f"{details}\nFeedback: {state['hitl_feedback']}"
-
-    try:
-        if viz_type == "table":
-            file_path = generate_table(data, config)
-        elif viz_type == "figure":
-            file_path = export_figure(data, config)
-        else:
-            file_path = generate_chart(data, config)
-    except Exception as exc:
-        logger.error("Visualization module failed: %s", exc)
-        return {"error": f"Visualization error: {exc}", "agent_output": None}
-
-    try:
-        repo.save_visualization(
-            project_id=project_id, section_id=section_id, viz_type=viz_type,
-            title=title, raw_data=data, config=config, file_path=file_path,
-            export_format=config.get("format", "png"),
-            export_size=config.get("export_size"),
-            color_scheme=config.get("color_scheme", "default"), details=details,
-        )
-    except Exception as exc:
-        logger.warning("Could not save visualization to DB: %s", exc)
-
-    return {
-        "agent_output": f"✅ **{viz_type.capitalize()} generated:** `{file_path}`\n\n**Title:** {title}",
-        "last_agent":   "visualize",
-        "error":        None,
-        "hitl_action":  None,
-        "hitl_feedback": None,
-    }
-
-
-logger = logging.getLogger(__name__)
-
-_VIZ_SYSTEM = """You are a data extraction assistant for a visualization tool.
-
-Given a user instruction, extract the visualization request and return ONLY JSON:
-{
-  "viz_type":   "<chart | table | figure>",
-  "title":      "<title for the visualization>",
-  "data":       { <extracted key-value data, or {} if not provided> },
   "config": {
-    "chart_type":    "<bar | line | scatter | pie>",
-    "x_label":       "<x-axis label or null>",
-    "y_label":       "<y-axis label or null>",
-    "format":        "<png | pdf | latex>",
-    "color_scheme":  "<default | grayscale | IEEE_blue | custom>",
-    "export_size":   "<1920x1080 | A4 | column_width or null>",
-    "caption":       "<optional caption>",
-    "figure_type":   "<chart | table>"
+    "type":         "<bar | line | scatter | pie | boxplot | violin | heatmap>",
+    "x_label":      "<x-axis label or null>",
+    "y_label":      "<y-axis label or null>",
+    "color":        "<hex color or named color e.g. #3A7BD5 or teal>",
+    "size":         [10, 6],
+    "format":       "<png | pdf | latex>",
+    "filename":     "<short_snake_case_name>",
+    "color_scheme": "<default | grayscale | IEEE_blue>",
+    "caption":      "<optional caption or null>"
   },
   "details": "<any extra instructions>"
 }
 
-If data is embedded in the instruction, parse it out.
-If format is not mentioned, default to png.
-Respond with raw JSON only."""
+CRITICAL rules:
+- config.type must be one of: bar, line, scatter, pie, boxplot, violin, heatmap
+- If the user gives numeric data inline, parse it into data.x and data.y
+- If no data is given, use plausible placeholder values
+- format defaults to png
+- filename must be snake_case, no spaces
+Respond with raw JSON only — no markdown fences."""
 
 
 def visualisation_node(state: GraphState) -> dict:
+    # Lazy import — node stays importable even if visualization pkg is missing
+    from visualization import generate_chart, generate_table
+
     project_id = state["project_id"]
     section_id = state.get("section_id")
     instruction = state.get("instruction") or state["user_message"]
@@ -141,16 +65,27 @@ def visualisation_node(state: GraphState) -> dict:
             SystemMessage(content=_VIZ_SYSTEM),
             HumanMessage(content=instruction),
         ])
-        parsed = json.loads(response.content.strip())
+        raw = response.content.strip()
+        # Strip markdown fences if LLM misbehaves
+        raw = raw.lstrip("```json").lstrip("```").rstrip("```").strip()
+        parsed = json.loads(raw)
     except Exception as exc:
-        logger.warning(
-            "Viz parameter extraction failed (%s), using defaults", exc)
+        logger.warning("Viz param extraction failed (%s), using defaults", exc)
+        # Sensible fallback so the node doesn't crash
         parsed = {
             "viz_type": "chart",
             "title":    "Visualization",
-            "data":     {},
-            "config":   {"format": "png", "figure_type": "chart"},
-            "details":  instruction,
+            "data":     {"x": ["A", "B", "C"], "y": [1, 2, 3]},
+            "config":   {
+                "type":     "bar",
+                "format":   "png",
+                "filename": "chart",
+                "x_label":  "",
+                "y_label":  "",
+                "color":    "#3A7BD5",
+                "size":     [10, 6],
+            },
+            "details": instruction,
         }
 
     viz_type = parsed.get("viz_type", "chart")
@@ -159,17 +94,25 @@ def visualisation_node(state: GraphState) -> dict:
     config = parsed.get("config", {})
     details = parsed.get("details", "")
 
-    # Inject hitl feedback for regenerate round
+    # ── Ensure all required config keys are present ──
+    config.setdefault("type",     "bar")
+    config.setdefault("format",   "png")
+    config.setdefault("filename", "chart")
+    config.setdefault("title",    title)
+    config.setdefault("size",     (10, 6))
+
+    # Convert size list → tuple (matplotlib expects tuple)
+    if isinstance(config.get("size"), list):
+        config["size"] = tuple(config["size"])
+
+    # ── Inject HITL feedback for regenerate rounds ──
     if state.get("hitl_feedback"):
         details = f"{details}\nFeedback: {state['hitl_feedback']}"
-        config["details"] = details
 
-    # ── Call visualization module ──
+    # ── Call the visualization module ──
     try:
         if viz_type == "table":
             file_path = generate_table(data, config)
-        elif viz_type == "figure":
-            file_path = export_figure(data, config)
         else:
             file_path = generate_chart(data, config)
     except Exception as exc:
@@ -200,10 +143,14 @@ def visualisation_node(state: GraphState) -> dict:
         + (f"**Details:** {details}" if details else "")
     )
 
+    # ── Update agent_outputs for compound intent support ──
+    existing = state.get("agent_outputs", {})
+
     return {
-        "agent_output": output_text,
-        "last_agent":   "visualize",
-        "error":        None,
-        "hitl_action":  None,
+        "agent_output":  output_text,
+        "agent_outputs": {**existing, "visualize": output_text},
+        "last_agent":    "visualize",
+        "error":         None,
+        "hitl_action":   None,
         "hitl_feedback": None,
     }

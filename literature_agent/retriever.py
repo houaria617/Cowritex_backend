@@ -7,8 +7,8 @@ from sentence_transformers import SentenceTransformer
 from openai import OpenAI
 import os
 
-from config import DocumentChunk
-from utils import split_text_with_overlap
+from literature_agent.config import DocumentChunk
+from literature_agent.utils import split_text_with_overlap
 
 
 class VectorStore:
@@ -52,7 +52,8 @@ class VectorStore:
             self.index = faiss.IndexFlatIP(self.dimension)
 
         self.index.add(self.chunk_embeddings)
-        print(f"Index built with {self.index.ntotal} vectors of dimension {self.dimension}")
+        print(
+            f"Index built with {self.index.ntotal} vectors of dimension {self.dimension}")
 
     def retrieve_mmr(
         self,
@@ -160,7 +161,7 @@ def process_pdfs_with_metadata(
 ) -> List[DocumentChunk]:
     """
     Process all PDFs in folder, extract text and metadata.
-    
+
     Args:
         folder_path: Path to folder containing PDFs
         chunk_size: Size of text chunks
@@ -169,7 +170,7 @@ def process_pdfs_with_metadata(
         llm_client: OpenAI client for LLM-based metadata extraction (optional)
         llm_model: Model name for LLM-based metadata extraction (optional)
     """
-    from tools import PDFExtractor
+    from literature_agent.tools import PDFExtractor
     import hashlib
 
     all_chunks: List[DocumentChunk] = []
@@ -180,7 +181,8 @@ def process_pdfs_with_metadata(
         print(f"❌ Folder does not exist: '{folder_path}'")
         return all_chunks
 
-    pdf_files = [f for f in os.listdir(folder_path) if f.lower().endswith(".pdf")]
+    pdf_files = [f for f in os.listdir(
+        folder_path) if f.lower().endswith(".pdf")]
 
     if not pdf_files:
         print(f"❌ No PDF files found in '{folder_path}'")
@@ -217,7 +219,8 @@ def process_pdfs_with_metadata(
             if not page_text:
                 continue
 
-            chunks = split_text_with_overlap(page_text, chunk_size, chunk_overlap)
+            chunks = split_text_with_overlap(
+                page_text, chunk_size, chunk_overlap)
 
             for chunk_text in chunks:
                 chunk_text = chunk_text.strip()
@@ -242,7 +245,8 @@ def process_pdfs_with_metadata(
                 global_chunk_idx += 1
                 doc_chunk_count += 1
 
-        print(f"  Extracted {len(pages_data)} pages → {doc_chunk_count} chunks")
+        print(
+            f"  Extracted {len(pages_data)} pages → {doc_chunk_count} chunks")
 
     return all_chunks
 
@@ -290,7 +294,8 @@ def process_web_resources(
             for tag in soup(["script", "style", "nav", "footer", "header", "aside", "form"]):
                 tag.decompose()
 
-            paragraphs = [p.get_text(separator=" ", strip=True) for p in soup.find_all("p")]
+            paragraphs = [p.get_text(separator=" ", strip=True)
+                          for p in soup.find_all("p")]
             paragraphs = [p for p in paragraphs if len(p) > 40]
 
             if not paragraphs:
@@ -300,24 +305,28 @@ def process_web_resources(
             full_text = "\n\n".join(paragraphs)
 
             if len(full_text) < 200:
-                print(f"  Skipping — too little text extracted ({len(full_text)} chars)")
+                print(
+                    f"  Skipping — too little text extracted ({len(full_text)} chars)")
                 continue
 
             metadata = PDFMetadata(
-                title=soup.title.string[:100] if soup.title else url.split("/")[-1][:100],
+                title=soup.title.string[:100] if soup.title else url.split(
+                    "/")[-1][:100],
                 authors=["Web Source"],
                 year=datetime.now().year,
                 filename=url[:100],
             )
 
-            chunks = split_text_with_overlap(full_text, chunk_size, chunk_overlap)
+            chunks = split_text_with_overlap(
+                full_text, chunk_size, chunk_overlap)
 
             for chunk_idx, chunk_text in enumerate(chunks):
                 chunk_text = chunk_text.strip()
                 if not chunk_text:
                     continue
 
-                chunk_id = hashlib.md5(f"{url}_{chunk_idx}".encode()).hexdigest()[:8]
+                chunk_id = hashlib.md5(
+                    f"{url}_{chunk_idx}".encode()).hexdigest()[:8]
 
                 doc_chunk = DocumentChunk(
                     text=chunk_text,

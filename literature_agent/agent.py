@@ -10,10 +10,10 @@ from openai import OpenAI
 import chromadb
 from chromadb.utils import embedding_functions
 
-from config import AgentConfig, AgentInput, AgentOutput, DocumentChunk, PDFMetadata
-from retriever import VectorStore, process_pdfs_with_metadata, process_web_resources
-from prompts import get_literature_review_prompt, SYSTEM_PROMPT
-from utils import ensure_folder_exists
+from literature_agent.config import AgentConfig, AgentInput, AgentOutput, DocumentChunk, PDFMetadata
+from literature_agent.retriever import VectorStore, process_pdfs_with_metadata, process_web_resources
+from literature_agent.prompts import get_literature_review_prompt, SYSTEM_PROMPT
+from literature_agent.utils import ensure_folder_exists
 from sentence_transformers import SentenceTransformer
 import numpy as np
 
@@ -48,7 +48,7 @@ class LiteratureAgent:
             llm_client = None
             llm_model = None
 
-        from retriever import process_pdfs_with_metadata
+        from literature_agent.retriever import process_pdfs_with_metadata
         pdf_chunks = process_pdfs_with_metadata(
             self.config.papers_folder,
             self.config.chunk_size,
@@ -61,7 +61,7 @@ class LiteratureAgent:
         self.chunks = pdf_chunks.copy()
 
         if input_data.use_web_resources and input_data.web_urls:
-            from retriever import process_web_resources
+            from literature_agent.retriever import process_web_resources
             web_chunks = process_web_resources(
                 input_data.web_urls,
                 self.config.chunk_size,

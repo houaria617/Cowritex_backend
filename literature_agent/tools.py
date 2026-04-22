@@ -15,7 +15,7 @@ import io
 from pypdf import PdfReader
 import pdfplumber
 
-from config import PDFMetadata
+from literature_agent.config import PDFMetadata
 
 
 class PDFExtractor:
@@ -67,7 +67,8 @@ Do not include any other text or explanation.
                 result = json.loads(content)
 
             metadata = PDFMetadata(filename=filename)
-            metadata.title = result.get("title") or os.path.splitext(filename)[0].replace('_', ' ').title()
+            metadata.title = result.get("title") or os.path.splitext(filename)[
+                0].replace('_', ' ').title()
             metadata.authors = result.get("authors") or ["Anonymous"]
             metadata.year = result.get("year") or "n.d."
 
@@ -76,7 +77,8 @@ Do not include any other text or explanation.
             return metadata
 
         except Exception as e:
-            print(f"LLM metadata extraction failed for {filename}: {e}, falling back to heuristics")
+            print(
+                f"LLM metadata extraction failed for {filename}: {e}, falling back to heuristics")
             return PDFExtractor.extract_metadata_from_text(first_page_text, filename)
 
     @staticmethod
@@ -136,21 +138,25 @@ Do not include any other text or explanation.
 
         author_text = text[:3000]
         for pattern in author_patterns:
-            match = re.search(pattern, author_text, re.MULTILINE | re.IGNORECASE)
+            match = re.search(pattern, author_text,
+                              re.MULTILINE | re.IGNORECASE)
             if match:
                 raw = match.group(1)
                 raw = re.sub(r'^\d+\s*', '', raw)
                 raw = re.sub(r'\s+', ' ', raw).strip()
                 authors = re.split(r',\s*|\s+and\s+', raw)
-                authors = [a.strip() for a in authors if a.strip() and len(a) > 2]
+                authors = [a.strip()
+                           for a in authors if a.strip() and len(a) > 2]
                 authors = [re.sub(r'\s+et\s+al\.?$', '', a) for a in authors]
-                authors = [a for a in authors if a and not a.isdigit() and len(a) > 2]
+                authors = [a for a in authors if a and not a.isdigit()
+                           and len(a) > 2]
                 if authors:
                     metadata.authors = authors[:5]
                     break
 
         if not metadata.authors:
-            name_matches = re.findall(r'\b([A-Z]\.\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b', author_text)
+            name_matches = re.findall(
+                r'\b([A-Z]\.\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b', author_text)
             if name_matches:
                 metadata.authors = list(dict.fromkeys(name_matches))[:3]
 
@@ -178,7 +184,8 @@ Do not include any other text or explanation.
                 metadata.title = metadata.title[:-1]
 
         if metadata.authors:
-            metadata.authors = [re.sub(r'\s+et\s+al\.?$', '', a).strip() for a in metadata.authors]
+            metadata.authors = [
+                re.sub(r'\s+et\s+al\.?$', '', a).strip() for a in metadata.authors]
 
         return metadata
 
@@ -192,10 +199,12 @@ Do not include any other text or explanation.
         # Try LLM extraction first if client provided
         if llm_client and llm_model and first_page_text:
             try:
-                metadata = PDFExtractor.extract_metadata_with_llm(first_page_text, metadata.filename, llm_client, llm_model)
+                metadata = PDFExtractor.extract_metadata_with_llm(
+                    first_page_text, metadata.filename, llm_client, llm_model)
                 return metadata
             except Exception as e:
-                print(f"LLM extraction failed, falling back to PDF properties: {e}")
+                print(
+                    f"LLM extraction failed, falling back to PDF properties: {e}")
 
         # Fallback to PDF properties
         try:
@@ -220,7 +229,8 @@ Do not include any other text or explanation.
 
         # Final fallback to heuristic text extraction
         if not metadata.title or not metadata.authors or metadata.year == "n.d.":
-            content_meta = PDFExtractor.extract_metadata_from_text(first_page_text, metadata.filename)
+            content_meta = PDFExtractor.extract_metadata_from_text(
+                first_page_text, metadata.filename)
             if not metadata.title and content_meta.title:
                 metadata.title = content_meta.title
             if not metadata.authors and content_meta.authors:
@@ -230,7 +240,8 @@ Do not include any other text or explanation.
 
         # Defaults
         if not metadata.title:
-            metadata.title = os.path.splitext(metadata.filename)[0].replace('_', ' ').title()
+            metadata.title = os.path.splitext(metadata.filename)[
+                0].replace('_', ' ').title()
         if not metadata.authors:
             metadata.authors = ["Anonymous"]
         if metadata.year == "n.d.":
@@ -279,7 +290,8 @@ Do not include any other text or explanation.
             source = "PyPDF"
 
         first_page_text = pages_text.get(1, "") if pages_text else ""
-        metadata = self.extract_metadata_from_pdf(pdf_path, first_page_text, llm_client, llm_model)
+        metadata = self.extract_metadata_from_pdf(
+            pdf_path, first_page_text, llm_client, llm_model)
 
         if use_ocr and (not pages_text or all(len(text) < 100 for text in pages_text.values())):
             print(f"Attempting OCR for scanned PDF: {pdf_path}")
@@ -295,7 +307,8 @@ Do not include any other text or explanation.
                         pages_text[page_num + 1] = ocr_text
                 source = "OCR (Tesseract)"
                 first_page_text = pages_text.get(1, "")
-                metadata = self.extract_metadata_from_pdf(pdf_path, first_page_text, llm_client, llm_model)
+                metadata = self.extract_metadata_from_pdf(
+                    pdf_path, first_page_text, llm_client, llm_model)
                 doc.close()
             except Exception as e:
                 print(f"OCR processing failed: {e}")
