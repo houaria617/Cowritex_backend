@@ -1,0 +1,80 @@
+{
+  "search_metadata": {
+    "query": "Draft the introduction section and find recent literature to support it",
+    "timestamp": "2026-04-23T13:33:49.894847",
+    "total_results": 5,
+    "filters_applied": {
+      "min_year": null,
+      "min_citations": null,
+      "require_pdf": true,
+      "max_results": 5
+    }
+  },
+  "results": [
+    {
+      "title": "Exploring learner perceptions of and interaction behaviors using the Research Writing Tutor for research article Introduction section draft analysis",
+      "authors": [
+        "SR Huffman"
+      ],
+      "citations": 15,
+      "year": 2015,
+      "abstract": "support of  current work against a backdrop of what has been accomplished thus far in the  field and to capture a clearer picture of the current state of the art in AWE research, this chapter",
+      "score": 0.4144,
+      "paper_url": "https://search.proquest.com/openview/7a2ec5c9e876a2f50ae0922512294df7/1?pq-origsite=gscholar&cbl=18750",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=Exploring%20learner%20perceptions%20of%20and%20interaction%20behaviors%20using%20the%20Research%20Writing%20Tutor%20for%20research%20article%20Introduction%20section%20draft%20analysis%20Huffman",
+      "download_link": "https://arxiv.org/pdf/2505.06581v2"
+    },
+    {
+      "title": "Drafting Introduction",
+      "authors": [
+        "Z Tan"
+      ],
+      "citations": 0,
+      "year": 2022,
+      "abstract": "I see two objectives in this paragraph. The first one is to develop a new technique ( for the   this book, identify and revise the writing errors in the last paragraph of Introduction section.",
+      "score": 0.1933,
+      "paper_url": "https://link.springer.com/chapter/10.1007/978-3-030-99364-1_5",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=Drafting%20Introduction%20Tan",
+      "download_link": "https://arxiv.org/pdf/1501.02128v1"
+    },
+    {
+      "title": "First Draft, Final Draft: An example is worth a thousand words",
+      "authors": [
+        "P Yaffe"
+      ],
+      "citations": 0,
+      "year": 2026,
+      "abstract": "Next, you will see an analysis of the text in terms of the  A particularly novel feature is the  incorporation of a new chapter on  He is the author of more than 30 books, which can be found",
+      "score": 0.1792,
+      "paper_url": "https://dl.acm.org/doi/abs/10.1145/3795142",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=First%20Draft%2C%20Final%20Draft%3A%20An%20example%20is%20worth%20a%20thousand%20words%20Yaffe",
+      "download_link": "https://dl.acm.org/doi/pdf/10.1145/3795142"
+    },
+    {
+      "title": "Draft pdf",
+      "authors": [
+        "D Kersten"
+      ],
+      "citations": 0,
+      "year": null,
+      "abstract": "In the next section, we will show that pattern inference theory  We could potentially introduce  a loss function for each scene  , as we only need to maintain three likelihoods over two",
+      "score": 0.1628,
+      "paper_url": "https://www.academia.edu/download/50434/p8go3hit3mt59bt8du2.pdf",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=Draft%20pdf%20Kersten",
+      "download_link": "https://www.academia.edu/download/50434/p8go3hit3mt59bt8du2.pdf"
+    },
+    {
+      "title": "DRAFT RESEARCH REPORT",
+      "authors": [
+        "S PERMISSION"
+      ],
+      "citations": 0,
+      "year": 2005,
+      "abstract": "citation, Part 4 draws on a collaboratively drafted research  the role of international aid in  service of foreign policy akin to  , counter-terrorism introduced a new urgency and dimension",
+      "score": 0.0521,
+      "paper_url": "https://www.researchgate.net/profile/Alan-Fowler-4/publication/242680560_NOT_FOR_QUOTATION_OR_CITATION_WITHOUT_AUTHOR'S_PERMISSION_DEVELOPMENT_FOR_SECURITY_A_CRITICAL_REVIEW_OF_COUNTERTERRORISM_MEASURES_INTERNATIONAL_AID_AND_CIVIL_SOCIETY/links/02e7e528f7d3fe0d26000000/NOT-FOR-QUOTATION-OR-CITATION-WITHOUT-AUTHORS-PERMISSION-DEVELOPMENT-FOR-SECURITY-A-CRITICAL-REVIEW-OF-COUNTERTERRORISM-MEASURES-INTERNATIONAL-AID-AND-CIVIL-SOCIETY.pdf",
+      "google_scholar_url": "https://scholar.google.com/scholar?q=DRAFT%20RESEARCH%20REPORT%20PERMISSION",
+      "download_link": "https://www.researchgate.net/profile/Alan-Fowler-4/publication/242680560_NOT_FOR_QUOTATION_OR_CITATION_WITHOUT_AUTHOR'S_PERMISSION_DEVELOPMENT_FOR_SECURITY_A_CRITICAL_REVIEW_OF_COUNTERTERRORISM_MEASURES_INTERNATIONAL_AID_AND_CIVIL_SOCIETY/links/02e7e528f7d3fe0d26000000/NOT-FOR-QUOTATION-OR-CITATION-WITHOUT-AUTHORS-PERMISSION-DEVELOPMENT-FOR-SECURITY-A-CRITICAL-REVIEW-OF-COUNTERTERRORISM-MEASURES-INTERNATIONAL-AID-AND-CIVIL-SOCIETY.pdf"
+    }
+  ]
+}

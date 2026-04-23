@@ -39,11 +39,9 @@ class LiteratureAgent:
 
         # Create LLM client for accurate metadata extraction
         try:
-            llm_client = OpenAI(
-                base_url="https://router.huggingface.co/v1",
-                api_key=os.environ.get("HF_TOKEN", "")
-            )
-            llm_model = self.config.llm_model
+            from groq import Groq
+            llm_client = Groq(api_key=os.environ.get("GROQ_API_KEY", ""))
+            llm_model = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
         except Exception:
             llm_client = None
             llm_model = None
@@ -153,19 +151,17 @@ class LiteratureAgent:
                 input_data.citation_style
             )
 
-            client = OpenAI(
-                base_url="https://router.huggingface.co/v1",
-                api_key=os.environ.get("HF_TOKEN", "")
-            )
+            from groq import Groq
+            client = Groq(api_key=os.environ.get("GROQ_API_KEY", ""))
 
             completion = client.chat.completions.create(
-                model=self.config.llm_model,
+                model=os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile"),
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": prompt}
+                    {"role": "user",   "content": prompt},
                 ],
                 temperature=self.config.temperature,
-                max_tokens=self.config.max_tokens
+                max_tokens=self.config.max_tokens,
             )
 
             review = ""
