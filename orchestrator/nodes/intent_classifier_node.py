@@ -2,7 +2,7 @@
 orchestrator/nodes/intent_classifier_node.py
 ─────────────────────────────────────────────
 Classifies the user's message into one or more of:
-    write | literature | visualize | chat | unknown
+    write | literature | visualize | search | chat | unknown
 
 Supports compound intents like ["write", "literature"] for
 requests that need both drafting and reference search.
@@ -32,10 +32,16 @@ Given the user message, output ONLY a JSON object with these fields:
 
 Intent rules — choose ALL that apply:
 - "write"       → user wants to draft, rephrase, expand, shorten, or edit any text section
-- "literature"  → user wants to search papers, find references, state-of-the-art, citations
+- "literature"  → user wants to SYNTHESIZE / ANALYSE papers, find state-of-the-art, build a review
+- "search"      → user wants to SEARCH / FIND / LIST papers or references (no synthesis needed)
 - "visualize"   → user wants a chart, table, figure, or data visualization
 - "chat"        → general question or clarification — no content generation needed
 - "unknown"     → genuinely ambiguous or unrelated
+
+Key distinction — "search" vs "literature":
+  • "search"      = find and list papers on a topic (raw results)
+  • "literature"  = analyse, synthesize, and write a literature review from papers
+  • Both together = search for papers AND produce a synthesis from them
 
 Compound intent rules:
 - Use multiple intents when the request clearly needs more than one agent.
@@ -44,34 +50,35 @@ Compound intent rules:
 - Maximum 3 intents at once.
 
 Examples:
-  "Write an intro and find me citations for it"          → ["write", "literature"]
-  "Draft the results section and add a bar chart"        → ["write", "visualize"]
-  "Find papers on RAG and generate a comparison table"   → ["literature", "visualize"]
-  "Write the intro, add citations, and plot the results" → ["write", "literature", "visualize"]
-  "What is transfer learning?"                           → ["chat"]
-  "asdfjkl"                                              → ["unknown"]
+  "Find me the latest papers on RAG"                       → ["search"]
+  "Search for papers on transformers and list them"        → ["search"]
+  "Write a literature review on LLMs"                     → ["literature"]
+  "Find papers on RAG and write a review from them"       → ["search", "literature"]
+  "Write an intro and find me citations for it"           → ["write", "literature"]
+  "Draft the results section and add a bar chart"         → ["write", "visualize"]
+  "Find papers on RAG and generate a comparison table"    → ["search", "visualize"]
+  "Write the intro, search for citations, and plot"       → ["write", "search", "visualize"]
+  "What is transfer learning?"                            → ["chat"]
+  "asdfjkl"                                               → ["unknown"]
 
 Respond with raw JSON only — no markdown fences, no extra text."""
 
 
-_VALID = {"write", "literature", "visualize", "chat", "unknown"}
+_VALID = {"write", "literature", "visualize", "search", "chat", "unknown"}
 _SOLO = {"chat", "unknown"}   # intents that must appear alone
 
 
 def _sanitize(intents: list) -> list[str]:
     """Validate and clean the intents list returned by the LLM."""
-    # Keep only known values, deduplicate, preserve order
     cleaned = list(dict.fromkeys(i for i in intents if i in _VALID))
 
     if not cleaned:
         return ["unknown"]
 
-    # If any solo intent is present, isolate it (take the first one found)
     for solo in _SOLO:
         if solo in cleaned:
             return [solo]
 
-    # Cap at 3
     return cleaned[:3]
 
 
@@ -79,7 +86,7 @@ def intent_classifier_node(state: GraphState) -> dict:
     project_id = state["project_id"]
     user_msg = state["user_message"]
 
-    # ── Load preferences if not yet in state ──
+    # ── Load preferences if not yet in state ──────────────────────────────────
     prefs = state.get("preferences") or {}
     if not prefs:
         try:
@@ -90,7 +97,7 @@ def intent_classifier_node(state: GraphState) -> dict:
 
     provider = prefs.get("llm_provider", "groq")
 
-    # ── Classify ──
+    # ── Classify ──────────────────────────────────────────────────────────────
     try:
         llm = get_llm(provider)
         response = llm.invoke([
@@ -101,12 +108,11 @@ def intent_classifier_node(state: GraphState) -> dict:
         intents_raw = parsed.get("intents", ["unknown"])
         instruction = parsed.get("instruction", user_msg)
 
-        # Handle old single-string response gracefully
         if isinstance(intents_raw, str):
             intents_raw = [intents_raw]
 
         intents = _sanitize(intents_raw)
-        intent = intents[0]          # primary intent for backward compat
+        intent = intents[0]
         error_msg = None
 
     except Exception as exc:
@@ -123,10 +129,12 @@ def intent_classifier_node(state: GraphState) -> dict:
     )
 
     return {
-        "intent":       intent,       # primary — kept for router compatibility
-        "intents":      intents,      # full list — used by new fan-out router
-        "instruction":  instruction,
-        "preferences":  prefs,
-        "agent_outputs": {},          # reset for this turn
-        "error":        error_msg,
+        "intent":        intent,
+        "intents":       intents,
+        "instruction":   instruction,
+        "preferences":   prefs,
+        "agent_outputs": {},
+        "search_results": [],        # reset for this turn
+        "search_summary": None,      # reset for this turn
+        "error":         error_msg,
     }

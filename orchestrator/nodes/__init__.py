@@ -10,3 +10,4 @@ from .output_node import output_node
 from .chat_node import chat_node
 from .error_node import error_node
 from .merge_node import merge_node
+from .search_node import search_node
