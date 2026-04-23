@@ -18,13 +18,13 @@ def calculate_relevance_scores(results: List[Dict], query: str) -> List[Dict]:
     """Calculate relevance scores for papers."""
     if not results:
         return results
-    
+
     if len(results) == 1:
         results[0]['relevance_score'] = 1.0
         return results
-    
+
     query_terms = set(query.lower().split()) if query else set()
-    
+
     if SKLEARN_AVAILABLE and len(results) > 1:
         try:
             return calculate_tfidf_scores(results, query)
@@ -42,9 +42,9 @@ def calculate_tfidf_scores(results: List[Dict], query: str) -> List[Dict]:
         title = (paper.get('title') or '') * 3  # Weight title 3x
         abstract = paper.get('abstract') or ''
         documents.append(f"{title} {abstract}".lower())
-    
+
     documents_with_query = documents + [query.lower()]
-    
+
     try:
         vectorizer = TfidfVectorizer(
             stop_words='english',
@@ -53,17 +53,17 @@ def calculate_tfidf_scores(results: List[Dict], query: str) -> List[Dict]:
             min_df=1,
             max_df=0.95
         )
-        
+
         tfidf_matrix = vectorizer.fit_transform(documents_with_query)
-        
+
         if tfidf_matrix.shape[0] < 2:
             raise ValueError("Insufficient vectors")
-        
+
         query_vector = tfidf_matrix[-1]
         paper_vectors = tfidf_matrix[:-1]
-        
+
         similarities = cosine_similarity(paper_vectors, query_vector).flatten()
-        
+
         # Normalize citations
         citations = []
         for p in results:
@@ -74,10 +74,11 @@ def calculate_tfidf_scores(results: List[Dict], query: str) -> List[Dict]:
                 except:
                     cit = 0
             citations.append(max(0, cit))
-        
+
         max_citations = max(citations) if citations else 1
-        citation_scores = [c / max_citations if max_citations > 0 else 0 for c in citations]
-        
+        citation_scores = [
+            c / max_citations if max_citations > 0 else 0 for c in citations]
+
         # Normalize years
         current_year = datetime.now().year
         years = []
@@ -87,10 +88,10 @@ def calculate_tfidf_scores(results: List[Dict], query: str) -> List[Dict]:
                 years.append(int(year))
             else:
                 years.append(current_year - 2)
-        
+
         max_year = max(years) if years else current_year
         min_year = min(years) if years else current_year - 10
-        
+
         year_scores = []
         for year in years:
             if max_year > min_year:
@@ -98,20 +99,20 @@ def calculate_tfidf_scores(results: List[Dict], query: str) -> List[Dict]:
                 year_scores.append(0.3 + 0.7 * normalized)
             else:
                 year_scores.append(0.5)
-        
+
         # Combine: 60% text, 25% citations, 15% recency
         for i, paper in enumerate(results):
             score = (
-                similarities[i] * 0.60 + 
-                citation_scores[i] * 0.25 + 
+                similarities[i] * 0.60 +
+                citation_scores[i] * 0.25 +
                 year_scores[i] * 0.15
             )
             paper['relevance_score'] = round(max(0.0, min(1.0, score)), 4)
-            
+
     except Exception as e:
         print(f"[WARN] TF-IDF error: {e}")
         return calculate_basic_scores(results, set(query.lower().split()))
-    
+
     return results
 
 
@@ -119,12 +120,12 @@ def calculate_basic_scores(results: List[Dict], query_terms: Set[str]) -> List[D
     """Fallback basic scoring using keyword matching."""
     if not results:
         return results
-    
+
     if not query_terms:
         for paper in results:
             paper['relevance_score'] = 0.5
         return results
-    
+
     # Normalize citations
     citations = []
     for p in results:
@@ -135,9 +136,9 @@ def calculate_basic_scores(results: List[Dict], query_terms: Set[str]) -> List[D
             except:
                 cit = 0
         citations.append(max(0, cit))
-    
+
     max_citations = max(citations) if citations else 1
-    
+
     # Normalize years
     current_year = datetime.now().year
     years = []
@@ -147,16 +148,16 @@ def calculate_basic_scores(results: List[Dict], query_terms: Set[str]) -> List[D
             years.append(int(year))
         else:
             years.append(current_year - 2)
-    
+
     max_year = max(years) if years else current_year
     min_year = min(years) if years else current_year - 10
-    
+
     for i, paper in enumerate(results):
         score = 0.0
-        
+
         title = (paper.get('title') or '').lower()
         abstract = (paper.get('abstract') or '').lower()
-        
+
         # Title match (45%)
         if query_terms and title:
             title_terms = set(title.split())
@@ -165,18 +166,20 @@ def calculate_basic_scores(results: List[Dict], query_terms: Set[str]) -> List[D
                 if query.lower() in title:
                     title_match = min(1.0, title_match + 0.3)
                 score += title_match * 0.45
-        
+
         # Abstract match (30%)
         if abstract and query_terms:
             abstract_terms = set(abstract.split())
             if len(query_terms) > 0:
-                abstract_match = len(query_terms & abstract_terms) / len(query_terms)
+                abstract_match = len(
+                    query_terms & abstract_terms) / len(query_terms)
                 score += abstract_match * 0.30
-        
+
         # Citations (15%)
-        citation_score = min(citations[i] / max_citations, 1.0) if max_citations > 0 else 0
+        citation_score = min(
+            citations[i] / max_citations, 1.0) if max_citations > 0 else 0
         score += citation_score * 0.15
-        
+
         # Recency (10%)
         year = years[i]
         if max_year > min_year:
@@ -184,7 +187,7 @@ def calculate_basic_scores(results: List[Dict], query_terms: Set[str]) -> List[D
         else:
             recency_score = 0.5
         score += recency_score * 0.10
-        
+
         paper['relevance_score'] = round(max(0.0, min(1.0, score)), 4)
-    
+
     return results
