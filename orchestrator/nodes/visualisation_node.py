@@ -113,6 +113,9 @@ def visualisation_node(state: GraphState) -> dict:
             file_path = generate_table(data, config)
         else:
             file_path = generate_chart(data, config)
+        # Always store absolute path so download route works regardless of CWD
+        from pathlib import Path as _Path
+        file_path = str(_Path(file_path).resolve())
     except Exception as exc:
         logger.error("Visualization module failed: %s", exc)
         return {
@@ -120,6 +123,12 @@ def visualisation_node(state: GraphState) -> dict:
             "agent_output": None,
             "last_agent":   "visualisation",
         }
+
+    # ── Resolve to absolute path before persisting ──
+    # Visualization module returns a relative path (visualization/outputs/...)
+    # Store absolute path so the download endpoint works regardless of CWD.
+    from pathlib import Path as _Path
+    file_path = str(_Path(file_path).resolve())
 
     # ── Persist to DB ──
     try:

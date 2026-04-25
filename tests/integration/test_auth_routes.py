@@ -26,10 +26,13 @@ class TestGetMe:
         resp = client.get("/auth/me")
         assert resp.status_code == 403   # HTTPBearer returns 403
 
-    def test_404_when_user_not_in_db(self, client, mock_repo, auth_headers):
+    def test_returns_jwt_profile_when_user_not_in_db(self, client, mock_repo, auth_headers):
         mock_repo.get_user.return_value = None
         resp = client.get("/auth/me", headers=auth_headers)
-        assert resp.status_code == 404
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["id"] == TEST_USER_ID
+        assert data["_source"] == "jwt_claims"
 
 
 class TestUpdateMe:
