@@ -15,7 +15,7 @@ supabase = "^2.0"
 fastapi = "^0.111"
 uvicorn = {extras = ["standard"], version = "^0.30"}
 python-dotenv = "^1.0"
-pydantic = "^2.0"
+python-multipart = "^0.0.7"
 # --- Added for the Literature Agent & Vector Store ---
 langchain-chroma = "^0.1.4"
 chromadb = "^0.5.0"

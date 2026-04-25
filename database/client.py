@@ -1,32 +1,33 @@
 """
 database/client.py
-──────────────────
-Lazy Supabase client — does NOT connect at import time.
-Call get_supabase() or use the `db` proxy only when you actually need it.
+───────────────────
+Single Supabase client instance shared across the whole app.
+All repository functions import `db` from here.
 """
+
 from __future__ import annotations
 
-import os
-from functools import lru_cache
 from supabase import create_client, Client
+from config.settings import settings
+
+_client: Client | None = None
 
 
-@lru_cache(maxsize=1)
-def get_supabase() -> Client:
-    url = os.environ["SUPABASE_URL"]
-    key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
-    return create_client(url, key)
+def get_db() -> Client:
+    global _client
+    if _client is None:
+        _client = create_client(settings.SUPABASE_URL,
+                                settings.SUPABASE_SERVICE_KEY)
+    return _client
 
 
-class _LazyClient:
-    """
-    Proxy that behaves exactly like a supabase Client but only
-    calls get_supabase() on first attribute access.
-    This means importing database.client never touches env vars.
-    """
-
-    def __getattr__(self, name: str):
-        return getattr(get_supabase(), name)
+# Module-level shortcut used by repository functions and nodes
+db: Client = None  # populated on first import via _init
 
 
-db: Client = _LazyClient()   # type: ignore[assignment]
+def _init():
+    global db
+    db = get_db()
+
+
+_init()
