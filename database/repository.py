@@ -32,19 +32,53 @@ from .client import db
 logger = logging.getLogger(__name__)
 
 
+def _safe_data(res, default=None):
+    """Safely extract .data from a supabase-py response, handling None response."""
+    if res is None:
+        return default
+    return res.data if res.data is not None else default
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Users
 # ─────────────────────────────────────────────────────────────────────────────
 
 def get_user(user_id: str) -> dict | None:
-    res = db.table("users").select("*").eq("id", user_id).single().execute()
-    return res.data
+    res = db.table("users").select(
+        "*").eq("id", user_id).maybe_single().execute()
+    return _safe_data(res)
 
 
 def get_user_by_email(email: str) -> dict | None:
     res = db.table("users").select(
         "*").eq("email", email).maybe_single().execute()
-    return res.data
+    return _safe_data(res)
+
+
+def ensure_user_exists(user_id: str, email: str = "", full_name: str = "") -> dict:
+    """
+    Guarantee a public.users row exists for this Supabase Auth user.
+    Called automatically on first project creation / first authenticated request.
+    This bridges auth.users (Supabase-managed) → public.users (our table).
+    """
+    existing = get_user(user_id)
+    if existing:
+        return existing
+
+    # Create minimal row — researcher can fill profile later via PATCH /auth/me
+    try:
+        res = db.table("users").insert({
+            "id":            user_id,   # use same UUID as Supabase Auth
+            "email":         email or f"{user_id}@placeholder.local",
+            "full_name":     full_name or "Researcher",
+            "password_hash": "",        # auth is managed by Supabase — not stored here
+        }).execute()
+        return res.data[0] if res and res.data else {"id": user_id}
+    except Exception as exc:
+        # Row may have been created by a concurrent request — fetch it
+        logger.warning(
+            "ensure_user_exists insert failed (%s) — fetching existing", exc)
+        return get_user(user_id) or {"id": user_id}
 
 
 def create_user(
@@ -82,6 +116,9 @@ def update_user(user_id: str, updates: dict) -> dict:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def create_project(user_id: str, title: str, description: str = "") -> dict:
+    # Ensure the user exists in public.users before inserting (FK constraint)
+    ensure_user_exists(user_id)
+
     res = db.table("projects").insert({
         "user_id":     user_id,
         "title":       title,
@@ -102,10 +139,10 @@ def get_project(project_id: str) -> dict | None:
         db.table("projects")
         .select("*")
         .eq("id", project_id)
-        .single()
+        .maybe_single()
         .execute()
     )
-    return res.data
+    return _safe_data(res)
 
 
 def list_projects(user_id: str) -> list[dict]:
@@ -149,10 +186,11 @@ def get_thread_id(project_id: str) -> str | None:
         db.table("projects")
         .select("thread_id")
         .eq("id", project_id)
-        .single()
+        .maybe_single()
         .execute()
     )
-    return (res.data or {}).get("thread_id")
+    data = _safe_data(res)
+    return data.get("thread_id") if data else None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -171,7 +209,7 @@ def get_preferences(project_id: str) -> dict:
         .maybe_single()
         .execute()
     )
-    if not res.data:
+    if not _safe_data(res):
         return {
             "writing_style":  "formal",
             "tone":           "academic",
@@ -181,7 +219,7 @@ def get_preferences(project_id: str) -> dict:
             "grounded_only":  False,
             "llm_provider":   "groq",
         }
-    row = res.data
+    row = _safe_data(res)
     return {
         "writing_style":  row.get("writing_style",  "formal"),
         "tone":           row.get("tone",           "academic"),
@@ -243,10 +281,10 @@ def get_section(section_id: str) -> dict | None:
         db.table("sections")
         .select("*")
         .eq("id", section_id)
-        .single()
+        .maybe_single()
         .execute()
     )
-    return res.data
+    return _safe_data(res)
 
 
 def get_project_sections(project_id: str) -> list[dict]:
@@ -295,7 +333,8 @@ def get_current_content(section_id: str) -> str | None:
         .maybe_single()
         .execute()
     )
-    return (res.data or {}).get("content")
+    data = _safe_data(res)
+    return data.get("content") if data else None
 
 
 def get_section_versions(section_id: str) -> list[dict]:
@@ -352,10 +391,10 @@ def restore_version(version_id: str, section_id: str) -> dict:
         db.table("document_versions")
         .select("content, author_type")
         .eq("id", version_id)
-        .single()
+        .maybe_single()
         .execute()
     )
-    row = res.data
+    row = _safe_data(res)
     return save_new_version(
         section_id=section_id,
         content=row["content"],
@@ -528,10 +567,10 @@ def get_literature_analysis(analysis_id: str) -> dict | None:
         db.table("literature_analysis")
         .select("*")
         .eq("id", analysis_id)
-        .single()
+        .maybe_single()
         .execute()
     )
-    return res.data
+    return _safe_data(res)
 
 
 def save_literature_citations(
@@ -614,10 +653,10 @@ def get_visualization(viz_id: str) -> dict | None:
         db.table("visualizations")
         .select("*")
         .eq("id", viz_id)
-        .single()
+        .maybe_single()
         .execute()
     )
-    return res.data
+    return _safe_data(res)
 
 
 def delete_visualization(viz_id: str) -> None:

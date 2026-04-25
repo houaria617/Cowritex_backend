@@ -89,7 +89,7 @@ class TestGetCurrentUser:
         """
         Token signed with wrong secret → HS256 raises InvalidSignatureError
         which is in _FALLTHROUGH_ERRORS → code falls through to JWKS.
-        We patch _decode_with_jwks to raise InvalidTokenError (no HTTP call).
+        We patch _decode_with_rs256 to raise InvalidTokenError (no HTTP call).
         Final result must be 401.
         """
         import api.dependencies as deps_module
@@ -101,7 +101,7 @@ class TestGetCurrentUser:
         def fake_jwks_decode(t):
             raise real_jwt.InvalidTokenError("Signature verification failed")
 
-        with patch.object(deps_module, "_decode_with_jwks", fake_jwks_decode):
+        with patch.object(deps_module, "_decode_with_rs256", fake_jwks_decode):
             with pytest.raises(HTTPException) as exc:
                 get_current_user(_make_credentials(token))
         assert exc.value.status_code == 401
@@ -126,7 +126,7 @@ class TestGetCurrentUser:
         def fake_jwks_decode(t):
             return {"sub": USER_ID, "role": "authenticated"}
 
-        with patch.object(deps_module, "_decode_with_jwks", fake_jwks_decode):
+        with patch.object(deps_module, "_decode_with_rs256", fake_jwks_decode):
             with patch("api.dependencies.jwt") as mock_jwt:
                 mock_jwt.decode.side_effect = fake_hs256_decode
                 mock_jwt.ExpiredSignatureError = real_jwt.ExpiredSignatureError

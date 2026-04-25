@@ -3,37 +3,87 @@ api/routes/auth.py
 ───────────────────
 Auth endpoints.
 
-Since Supabase owns authentication, this layer is thin:
-  - The frontend calls Supabase Auth directly to sign up / sign in / refresh.
-  - Our FastAPI only needs GET /auth/me (read profile) and
-    PATCH /auth/me (update profile fields we store in the users table).
+Important: Supabase Auth stores users in auth.users (managed by Supabase).
+Our public.users table is optional extended profile storage.
 
-If you want a pure-API flow (no Supabase JS SDK on frontend), the
-POST /auth/login endpoint is included — it calls Supabase's REST auth
-so the backend acts as the auth proxy.
+GET /auth/me  — returns identity from JWT claims + public.users profile if it exists.
+               Never fails with 404 just because public.users has no row yet.
+PATCH /auth/me — upserts a profile row in public.users.
 """
 
 from __future__ import annotations
 
-import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+import logging
+
+import jwt as pyjwt
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from api.dependencies import get_current_user
 from api.schemas.requests import UserProfileUpdate
-from config.settings import settings
 from database import repository as repo
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+_bearer = HTTPBearer()
+
+
+def _claims_from_request(request: Request) -> dict:
+    """
+    Extract unverified claims from the Bearer token already validated by
+    get_current_user. Safe to read without re-verifying because the
+    dependency already confirmed the signature.
+    """
+    auth_header = request.headers.get("authorization", "")
+    token = auth_header.removeprefix("Bearer ").strip()
+    try:
+        return pyjwt.decode(
+            token,
+            options={"verify_signature": False},
+        )
+    except Exception:
+        return {}
 
 
 @router.get("/me")
-def get_me(user_id: str = Depends(get_current_user)) -> dict:
-    """Return the current user's profile from the users table."""
-    user = repo.get_user(user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    user.pop("password_hash", None)   # never expose this
-    return user
+def get_me(
+    request: Request,
+    user_id: str = Depends(get_current_user),
+) -> dict:
+    """
+    Return the current user's profile.
+
+    Priority:
+      1. public.users row (if it exists — researcher filled in their profile)
+      2. JWT claims fallback (always available — email, sub)
+
+    Never returns 404: if no public.users row exists yet, we return the
+    identity from the JWT so the frontend can still bootstrap.
+    """
+    # Try extended profile from public.users
+    db_user = repo.get_user(user_id)
+
+    if db_user:
+        db_user.pop("password_hash", None)
+        return db_user
+
+    # Fallback: build a minimal profile from JWT claims
+    # Supabase stores email in the top-level claim and in user_metadata
+    claims = _claims_from_request(request)
+    user_metadata = claims.get("user_metadata") or {}
+
+    return {
+        "id":                user_id,
+        "email":             claims.get("email") or user_metadata.get("email") or "",
+        "full_name":         user_metadata.get("full_name") or user_metadata.get("name") or "",
+        "academic_position": None,
+        "organization":      None,
+        "field_interests":   None,
+        "created_at":        None,
+        "updated_at":        None,
+        "_source":           "jwt_claims",   # tells frontend no DB profile exists yet
+    }
 
 
 @router.patch("/me")
@@ -41,10 +91,28 @@ def update_me(
     body: UserProfileUpdate,
     user_id: str = Depends(get_current_user),
 ) -> dict:
-    """Update editable profile fields."""
+    """
+    Upsert editable profile fields into public.users.
+    Creates the row if it doesn't exist yet.
+    """
     updates = body.model_dump(exclude_none=True)
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
-    updated = repo.update_user(user_id, updates)
+
+    existing = repo.get_user(user_id)
+
+    if existing:
+        updated = repo.update_user(user_id, updates)
+    else:
+        # First time the researcher fills in their profile — create the row
+        updated = repo.create_user(
+            email=updates.get("email", ""),
+            full_name=updates.get("full_name", ""),
+            password_hash="",   # managed by Supabase Auth — we store nothing here
+            academic_position=updates.get("academic_position", ""),
+            organization=updates.get("organization", ""),
+            field_interests=updates.get("field_interests", ""),
+        )
+
     updated.pop("password_hash", None)
     return updated

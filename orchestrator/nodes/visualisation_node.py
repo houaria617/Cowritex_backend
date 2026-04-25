@@ -118,7 +118,7 @@ def visualisation_node(state: GraphState) -> dict:
         return {
             "error":        f"Visualization error: {exc}",
             "agent_output": None,
-            "last_agent":   "visualize",
+            "last_agent":   "visualisation",
         }
 
     # ── Persist to DB ──
@@ -149,8 +149,8 @@ def visualisation_node(state: GraphState) -> dict:
 
     return {
         "agent_output":  output_text,
-        "agent_outputs": {**existing, "visualize": output_text},
-        "last_agent":    "visualize",
+        "agent_outputs": {**existing, "visualisation": output_text},
+        "last_agent":    "visualisation",
         "error":         None,
         "hitl_action":   None,
         "hitl_feedback": None,

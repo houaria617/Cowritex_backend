@@ -202,6 +202,28 @@ def _format_summary(papers: list[dict], query: str) -> str:
     return "\n".join(lines)
 
 
+def _sanitize_papers(papers: list[dict]) -> list[dict]:
+    """
+    Convert numpy scalar types to native Python so MemorySaver
+    can msgpack-serialize the state without crashing.
+    calculate_relevance_scores() writes numpy.float64 into relevance_score.
+    """
+    try:
+        import numpy as np
+
+        def _convert(v):
+            if isinstance(v, np.floating):
+                return float(v)
+            if isinstance(v, np.integer):
+                return int(v)
+            if isinstance(v, np.ndarray):
+                return v.tolist()
+            return v
+        return [{k: _convert(v) for k, v in p.items()} for p in papers]
+    except ImportError:
+        return papers  # numpy not available — values are already native
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 def search_node(state: GraphState) -> dict:
@@ -291,6 +313,10 @@ def search_node(state: GraphState) -> dict:
             logger.warning("search_node: DB persistence failed: %s", exc)
 
     existing = state.get("agent_outputs", {})
+
+    # Convert numpy types → native Python before storing in state.
+    # MemorySaver msgpack cannot serialize numpy.float64.
+    papers = _sanitize_papers(papers)
 
     return {
         "search_results":  papers,
