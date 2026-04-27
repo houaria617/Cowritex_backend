@@ -124,11 +124,9 @@ def visualisation_node(state: GraphState) -> dict:
             "last_agent":   "visualisation",
         }
 
-    # ── Resolve to absolute path before persisting ──
-    # Visualization module returns a relative path (visualization/outputs/...)
-    # Store absolute path so the download endpoint works regardless of CWD.
-    from pathlib import Path as _Path
-    file_path = str(_Path(file_path).resolve())
+    # export.py already returns str(out_path.resolve()) — absolute path.
+    # Ensure it's stored as string for DB.
+    file_path = str(file_path)
 
     # ── Persist to DB ──
     try:

@@ -173,18 +173,59 @@ def download_visualization(
     if not viz:
         raise HTTPException(status_code=404, detail="Visualization not found")
 
-    file_path = Path(viz.get("file_path", ""))
+    raw_path = viz.get("file_path", "")
+    if not raw_path:
+        raise HTTPException(
+            status_code=404, detail="No file path stored for this visualization")
+
+    file_path = Path(raw_path)
+
+    # If the stored path is relative, resolve it against the project root.
+    # The visualization module saves to visualization/outputs/ relative to CWD
+    # when the graph ran — which is the Cowritex project root.
+    if not file_path.is_absolute():
+        # Try resolving from CWD first (works if server started from project root)
+        resolved = Path.cwd() / file_path
+        if not resolved.exists():
+            # Fallback: try common project root locations
+            for base in [Path.cwd(), Path.cwd().parent, Path("/home/djabir-houaria/Cowritex")]:
+                candidate = base / file_path
+                if candidate.exists():
+                    resolved = candidate
+                    break
+        file_path = resolved
+
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File not found on disk")
+        logger.error(
+            "Visualization file not found. stored_path=%r resolved=%s cwd=%s",
+            raw_path, file_path, Path.cwd()
+        )
+        raise HTTPException(
+            status_code=404,
+            detail=f"File not found on disk. Stored path: {raw_path}"
+        )
 
     media_map = {
         "png":   "image/png",
         "pdf":   "application/pdf",
         "latex": "application/x-latex",
     }
+    # Extension map: export_format stored in DB → actual file extension on disk
+    # "latex" format → file saved as .tex by export_latex_chart()
+    ext_map = {
+        "png":   "png",
+        "pdf":   "pdf",
+        "latex": "tex",   # ← critical: format="latex" but file is .tex not .latex
+    }
     fmt = viz.get("export_format", "png")
     media = media_map.get(fmt, "application/octet-stream")
-    filename = f"{viz.get('title', 'visualization')}.{fmt}"
+    ext = ext_map.get(fmt, fmt)
+    # Use the actual file's suffix if available — most reliable
+    actual_suffix = file_path.suffix.lstrip(".")
+    if actual_suffix:
+        ext = actual_suffix
+    safe_title = (viz.get("title") or "visualization").replace(" ", "_")
+    filename = f"{safe_title}.{ext}"
 
     return FileResponse(path=str(file_path), media_type=media, filename=filename)
 

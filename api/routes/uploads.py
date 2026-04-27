@@ -3,11 +3,18 @@ api/routes/uploads.py
 ──────────────────────
 PDF upload management for the LiteratureAgent.
 
-The LiteratureAgent reads PDFs from config.papers_folder (set in AgentConfig).
-We store uploaded files under:
-    uploads/{project_id}/
+Critical design note
+─────────────────────
+LiteratureAgent.load_documents() reads from AgentConfig.papers_folder.
+We must store uploads in that exact folder so the agent finds them.
 
-This keeps papers scoped per project so different projects don't share PDFs.
+The literature_node passes web_urls extracted from search_results for
+online papers. For LOCAL uploaded PDFs, the agent reads them from disk
+via load_documents() → process_pdfs_with_metadata().
+
+Upload path: uploads/{project_id}/{filename}.pdf
+This path is passed to literature_node via state["preferences"]["papers_folder"]
+so AgentConfig can be initialized with the correct folder per project.
 """
 
 from __future__ import annotations
@@ -18,15 +25,17 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File
 
 from api.dependencies import verify_project_access
+from database import repository as repo
 
 router = APIRouter(tags=["uploads"])
 
-# Base upload directory — matches what LiteratureAgent's AgentConfig points to.
-# Override in settings if needed.
-_UPLOAD_BASE = Path("uploads")
+# Base upload directory — one subfolder per project
+# absolute so agent can always find it
+_UPLOAD_BASE = Path("uploads").resolve()
 
 
 def _project_dir(project_id: str) -> Path:
+    """Return and create the upload directory for a project."""
     d = _UPLOAD_BASE / project_id
     d.mkdir(parents=True, exist_ok=True)
     return d
@@ -42,23 +51,35 @@ async def upload_pdf(
 ) -> dict:
     """
     Upload a PDF for the literature agent to process.
-    Accepts only .pdf files. Max size enforced by the web server (nginx/uvicorn).
+    File is saved to uploads/{project_id}/ with its original name.
+    Duplicate filenames are overwritten (idempotent).
     """
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
             status_code=400, detail="Only PDF files are accepted")
 
-    dest = _project_dir(project_id) / file.filename
+    # Sanitize filename — strip path components to prevent directory traversal
+    safe_name = Path(file.filename).name
+    if not safe_name or not safe_name.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    dest = _project_dir(project_id) / safe_name
     try:
-        with dest.open("wb") as f:
-            shutil.copyfileobj(file.file, f)
+        with dest.open("wb") as out:
+            shutil.copyfileobj(file.file, out)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=500, detail=f"Could not save file: {exc}")
     finally:
         await file.close()
 
     return {
-        "filename":   file.filename,
-        "path":       str(dest),
-        "project_id": project_id,
+        "filename":     safe_name,
+        "path":         str(dest),          # absolute path
+        "project_id":   project_id,
+        "size_bytes":   dest.stat().st_size,
+        # pass this to literature agent
+        "papers_folder": str(_project_dir(project_id)),
     }
 
 
@@ -68,17 +89,26 @@ async def upload_pdf(
 def list_pdfs(
     project_id: str,
     project: dict = Depends(verify_project_access),
-) -> list[dict]:
-    """List all PDFs uploaded for this project."""
+) -> dict:
+    """
+    List all PDFs uploaded for this project.
+    Also returns papers_folder so the frontend knows where to point the agent.
+    """
     d = _project_dir(project_id)
-    return [
+    files = [
         {
-            "filename": p.name,
+            "filename":   p.name,
             "size_bytes": p.stat().st_size,
-            "path": str(p),
+            "path":       str(p),
         }
         for p in sorted(d.glob("*.pdf"))
     ]
+    return {
+        "project_id":    project_id,
+        "papers_folder": str(d),
+        "count":         len(files),
+        "files":         files,
+    }
 
 
 # ── Delete ────────────────────────────────────────────────────────────────────
@@ -90,10 +120,15 @@ def delete_pdf(
     project: dict = Depends(verify_project_access),
 ) -> Response:
     """Remove a specific PDF from the project's upload folder."""
-    target = _project_dir(project_id) / filename
-    if not target.exists():
+    # Sanitize to prevent path traversal
+    safe_name = Path(filename).name
+    if not safe_name.lower().endswith(".pdf"):
+        raise HTTPException(
+            status_code=400, detail="Only PDF files can be deleted")
+
+    target = _project_dir(project_id) / safe_name
+    if not target.exists() or not target.is_file():
         raise HTTPException(status_code=404, detail="File not found")
-    if not target.is_file() or not filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Invalid file")
+
     target.unlink()
     return Response(status_code=204)
