@@ -77,9 +77,23 @@ def _run_graph_sync(initial_state: dict, config: dict) -> dict:
 
 
 def _resume_graph_sync(resume_state: dict, config: dict) -> dict:
-    """Resume after HITL by invoking again with the same thread_id config."""
+    """
+    Resume after HITL using the correct LangGraph interrupt/resume pattern.
+
+    The graph paused at interrupt_before=["hitl"].
+    Correct sequence:
+      1. graph.update_state(config, hitl_fields) — merge HITL decision into checkpoint
+      2. graph.invoke(None, config)              — resume from where it paused
+         (None input = continue from checkpoint, don't restart)
+
+    Passing a partial state dict to invoke() directly causes KeyError on
+    required fields like 'project_id' because LangGraph treats it as a new run.
+    """
     graph = _get_graph()
-    result = graph.invoke(resume_state, config)
+    # Step 1: inject the HITL decision into the saved checkpoint
+    graph.update_state(config, resume_state)
+    # Step 2: resume execution — None input means "continue from checkpoint"
+    result = graph.invoke(None, config)
     return result
 
 

@@ -207,6 +207,14 @@ class TestResumeEndpoint:
         assert resp.status_code == 422
 
     def test_resume_injects_correct_state(self, client, mock_repo, mock_graph, auth_headers):
+        """
+        After the fix, resume uses:
+          graph.update_state(config, hitl_fields)   ← injects decision
+          graph.invoke(None, config)                ← continues from checkpoint
+
+        So we verify update_state was called with the correct HITL fields,
+        not invoke's first argument (which is now None).
+        """
         mock_graph.invoke.return_value = _fake_state_after_resume()
         client.post(
             f"/projects/{TEST_PROJECT_ID}/run/{TEST_THREAD_ID}/resume",
@@ -216,10 +224,17 @@ class TestResumeEndpoint:
             },
             headers=auth_headers,
         )
-        call_args = mock_graph.invoke.call_args
-        resume_state = call_args[0][0]
-        assert resume_state["hitl_action"] == "regenerate"
-        assert resume_state["hitl_feedback"] == "Be more formal"
+        # update_state must have been called with the HITL fields
+        mock_graph.update_state.assert_called_once()
+        update_call_args = mock_graph.update_state.call_args
+        # second positional arg is the state dict
+        injected_state = update_call_args[0][1]
+        assert injected_state["hitl_action"] == "regenerate"
+        assert injected_state["hitl_feedback"] == "Be more formal"
+
+        # invoke must have been called with None as input (resume, not restart)
+        invoke_call_args = mock_graph.invoke.call_args
+        assert invoke_call_args[0][0] is None
 
 
 # ─────────────────────────────────────────────────────────────────────────────

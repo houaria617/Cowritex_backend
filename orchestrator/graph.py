@@ -7,20 +7,17 @@ Flow summary
 ────────────
 intent_classifier
     │
-    ├─► "search"                         → search_node → merge → hitl
+    ├─► "search"      → search_node → merge → hitl
     │
-    ├─► "literature" + grounded_only=False → search_node → literature → merge → hitl
-    ├─► "literature" + grounded_only=True  →              literature → merge → hitl
+    ├─► "literature"  → literature_node → merge → hitl
+    │     (grounded_only=True  → agent uses ChromaDB only)
+    │     (grounded_only=False → agent fetches web resources itself)
     │
-    ├─► "write"                          → writing      → merge → hitl
-    ├─► "visualize"                      → visualisation → merge → hitl
+    ├─► "write"       → writing       → merge → hitl
+    ├─► "visualize"   → visualisation → merge → hitl
     │
-    ├─► "chat"                           → chat → output → END
-    └─► "unknown" / error                → error_handler → END
-
-Parallel fan-out example:
-    intents = ["write", "literature"]
-        → writing + literature run, both feed merge → hitl
+    ├─► "chat"        → chat → output → END
+    └─► "unknown" / error → error_handler → END
 
 HITL resume actions:
     approve    → persist → output → END
@@ -54,7 +51,7 @@ def build_graph(checkpointer):
 
     # ── Register nodes ────────────────────────────────────────────────────────
     g.add_node("intent_classifier", intent_classifier_node)
-    g.add_node("search",            search_node)          # NEW
+    g.add_node("search",            search_node)
     g.add_node("writing",           writing_node)
     g.add_node("literature",        literature_node)
     g.add_node("visualisation",     visualisation_node)
@@ -69,30 +66,28 @@ def build_graph(checkpointer):
     # ── Entry point ───────────────────────────────────────────────────────────
     g.set_entry_point("intent_classifier")
 
-    # ── intent_classifier → fan-out ───────────────────────────────────────────
-    # "search" intent and "literature + web" both go to search_node first.
-    # Everything else routes directly to its agent.
+    # ── intent_classifier → agents ────────────────────────────────────────────
+    # Literature always routes directly to literature_node.
+    # search_node is only used for explicit "search" intent.
     g.add_conditional_edges(
         "intent_classifier",
         route_intent,
         {
-            "search":        "search",       # explicit search intent
-            "search_first":  "search",       # literature intent, grounded_only=False
+            "search":        "search",
+            "literature":    "literature",
             "writing":       "writing",
-            "literature":    "literature",   # grounded_only=True path
             "visualisation": "visualisation",
             "chat":          "chat",
             "error_handler": "error_handler",
         },
     )
 
-    # ── After search_node: go to literature (if compound) or merge (if pure search) ──
+    # ── search_node always goes to merge (pure search only) ───────────────────
     g.add_conditional_edges(
         "search",
         route_after_search,
         {
-            "literature": "literature",   # search results handed off to lit node
-            "merge":      "merge",        # pure "search" intent stops at merge/HITL
+            "merge": "merge",
         },
     )
 
@@ -115,7 +110,7 @@ def build_graph(checkpointer):
             "writing":       "writing",
             "literature":    "literature",
             "visualisation": "visualisation",
-            "search":        "search",       # regenerate a pure search
+            "search":        "search",
         },
     )
 
