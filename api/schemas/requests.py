@@ -70,6 +70,21 @@ class VersionRestore(BaseModel):
     version_id: str
 
 
+class SectionContentUpdate(BaseModel):
+    """Save content written directly by the researcher (no AI involved)."""
+    content: str = Field(..., min_length=1)
+
+
+class SectionContentUpdate(BaseModel):
+    """
+    Direct content update for a section.
+    Creates a new document_version row (author_type="human") and
+    marks it as is_current=True — same as the edit HITL action but
+    triggered directly by the researcher without going through the graph.
+    """
+    content: str = Field(..., min_length=1)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Orchestrator  (the core: run + resume)
 # ─────────────────────────────────────────────────────────────────────────────

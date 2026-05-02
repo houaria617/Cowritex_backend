@@ -9,7 +9,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Response
 
 from api.dependencies import get_current_user, verify_project_access
-from api.schemas.requests import SectionCreate, SectionUpdate, VersionRestore
+from api.schemas.requests import SectionCreate, SectionUpdate, VersionRestore, SectionContentUpdate, SectionContentUpdate
 from database import repository as repo
 
 router = APIRouter(tags=["sections"])
@@ -77,6 +77,57 @@ def delete_section(
 ) -> Response:
     repo.delete_section(section_id)
     return Response(status_code=204)
+
+
+# ── Direct content update (human edit outside the graph) ─────────────────────
+
+@router.patch("/sections/{section_id}/content")
+def update_section_content(
+    section_id: str,
+    body: SectionContentUpdate,
+    section: dict = Depends(_get_section_with_access),
+) -> dict:
+    """
+    Save new content for a section directly — no AI, no HITL.
+    Creates a new document_version (author_type="human", is_current=True).
+
+    Returns the updated section with the new content injected.
+    Use this for:
+      - Researcher typing directly in the editor
+      - Pasting content from an external source
+      - Manual corrections after AI generation
+    """
+    version = repo.save_new_version(
+        section_id=section_id,
+        content=body.content,
+        author_type="human",
+        suggestion_id=None,
+    )
+    # Return full section with updated content
+    updated_section = repo.get_section(section_id)
+    return updated_section
+
+
+# ── Direct content save (human writing, no AI) ───────────────────────────────
+
+@router.patch("/sections/{section_id}/content")
+def save_section_content(
+    section_id: str,
+    body: SectionContentUpdate,
+    section: dict = Depends(_get_section_with_access),
+) -> dict:
+    """
+    Save content written directly by the researcher — no AI, no HITL.
+    Creates a new document_version with author_type="human".
+    Returns the section with updated content.
+    """
+    repo.save_new_version(
+        section_id=section_id,
+        content=body.content,
+        author_type="human",
+        suggestion_id=None,
+    )
+    return repo.get_section(section_id)
 
 
 # ── Version history ───────────────────────────────────────────────────────────

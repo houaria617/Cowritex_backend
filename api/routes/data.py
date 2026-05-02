@@ -131,7 +131,7 @@ async def inline_suggestion(
             target_section=section.get("type", ""),
         )
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     result = await loop.run_in_executor(None, _call_agent)
 
     if "error" in result:

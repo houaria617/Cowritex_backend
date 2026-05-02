@@ -25,8 +25,8 @@ except ImportError:
     except ImportError:
         CHROMA_AVAILABLE = False
 
-CHROMA_DB_PATH       = "./chroma_db"
-CHROMA_COLLECTION    = "literature_chunks"
+CHROMA_DB_PATH = "./chroma_db"
+CHROMA_COLLECTION = "literature_chunks"
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
 _vectorstore = None
@@ -54,7 +54,8 @@ def _get_vectorstore():
         print(f"[tools] Connected to ChromaDB — {count} chunks available.")
         return _vectorstore
     except Exception as e:
-        print(f"[tools] ChromaDB unavailable ({e}). Running without literature context.")
+        print(
+            f"[tools] ChromaDB unavailable ({e}). Running without literature context.")
         return None
 
 
@@ -71,13 +72,13 @@ def query_literature_context(query: str, top_k: int = 5) -> str:
         return ""
     chunks = []
     for i, doc in enumerate(docs, start=1):
-        meta    = doc.metadata
+        meta = doc.metadata
         authors = meta.get("authors",     "Unknown")
-        year    = meta.get("year",        "n.d.")
-        source  = meta.get("source_file", "unknown")
-        page    = meta.get("page_number", "?")
-        title   = meta.get("title",       "")
-        header  = f"[SOURCE {i}] {authors} ({year})"
+        year = meta.get("year",        "n.d.")
+        source = meta.get("source_file", "unknown")
+        page = meta.get("page_number", "?")
+        title = meta.get("title",       "")
+        header = f"[SOURCE {i}] {authors} ({year})"
         if title:
             header += f" — {title}"
         header += f" — {source}, p.{page}"
@@ -109,18 +110,18 @@ def inject_source_citations(text: str, sources: list, style: str = "APA") -> str
     references = []
     for i, meta in enumerate(sources, start=1):
         authors = meta.get("authors",     "Unknown")
-        year    = meta.get("year",        "n.d.")
-        title   = meta.get("title",       "Untitled")
-        src     = meta.get("source_file", "")
-        page    = meta.get("page_number", "")
+        year = meta.get("year",        "n.d.")
+        title = meta.get("title",       "Untitled")
+        src = meta.get("source_file", "")
+        page = meta.get("page_number", "")
         if style.upper() == "IEEE":
             inline = f"[{i}]"
-            ref    = f'[{i}] {authors}, "{title}," {year}. ({src}, p.{page})'
+            ref = f'[{i}] {authors}, "{title}," {year}. ({src}, p.{page})'
         else:
-            first  = authors.split(",")[0].strip()
+            first = authors.split(",")[0].strip()
             suffix = " et al." if "et al." in authors or "," in authors else ""
             inline = f"({first}{suffix}, {year})"
-            ref    = f"{authors} ({year}). {title}. {src}, p.{page}."
+            ref = f"{authors} ({year}). {title}. {src}, p.{page}."
         text = text.replace(f"[SOURCE {i}]", inline)
         references.append(ref)
     if references:
@@ -150,7 +151,8 @@ def validate_output(text: str) -> bool:
         return False
     if len(text.split()) < 20:
         return False
-    refusals = ["i cannot", "i can't", "i am unable", "as an ai", "i don't have access"]
+    refusals = ["i cannot", "i can't", "i am unable",
+                "as an ai", "i don't have access"]
     lower = text.lower()
     if any(r in lower[:150] for r in refusals):
         return False
@@ -163,12 +165,12 @@ def format_prefetched_sources(sources: List[dict]) -> str:
     chunks = []
     for i, src in enumerate(sources, start=1):
         authors = src.get("authors", "Unknown")
-        year    = src.get("year",    "n.d.")
-        title   = src.get("title",   "")
-        source  = src.get("source_file", src.get("url", "unknown"))
-        page    = src.get("page",    "")
-        text    = src.get("abstract", src.get("text", ""))
-        header  = f"[SOURCE {i}] {authors} ({year})"
+        year = src.get("year",    "n.d.")
+        title = src.get("title",   "")
+        source = src.get("source_file", src.get("url", "unknown"))
+        page = src.get("page",    "")
+        text = src.get("abstract", src.get("text", ""))
+        header = f"[SOURCE {i}] {authors} ({year})"
         if title:
             header += f" — {title}"
         if source:
@@ -220,7 +222,7 @@ def build_suggestion_diff(original: str, suggestion: str) -> list[dict]:
 
     # Backtrack to build edit sequence
     edits = []
-    i, j  = m, n
+    i, j = m, n
     while i > 0 or j > 0:
         if i > 0 and j > 0 and orig_words[i - 1].lower() == sugg_words[j - 1].lower():
             edits.append(("equal", sugg_words[j - 1]))

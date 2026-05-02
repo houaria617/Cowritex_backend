@@ -70,7 +70,10 @@ class TestListPDFs:
             headers=auth_headers,
         )
         assert resp.status_code == 200
-        assert resp.json() == []
+        data = resp.json()
+        assert data["count"] == 0
+        assert data["files"] == []
+        assert "papers_folder" in data
 
     def test_lists_uploaded_files(self, client, auth_headers, tmp_path):
         # Pre-create a PDF in the upload dir
@@ -84,7 +87,9 @@ class TestListPDFs:
             headers=auth_headers,
         )
         assert resp.status_code == 200
-        filenames = [f["filename"] for f in resp.json()]
+        data = resp.json()
+        assert data["count"] == 2
+        filenames = [f["filename"] for f in data["files"]]
         assert "paper1.pdf" in filenames
         assert "paper2.pdf" in filenames
 

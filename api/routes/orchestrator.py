@@ -21,8 +21,8 @@ How the graph pause/resume works with MemorySaver
    → state is saved in MemorySaver under thread_id
    → returns the state at the interruption point
 
-2. graph.invoke(resume_state, config)  ← same thread_id config
-   → MemorySaver replays from the checkpoint
+2. graph.update_state(config, hitl_fields) + graph.invoke(None, config)
+   → MemorySaver resumes from the checkpoint
    → graph continues from hitl node onward
    → returns final state
 """
@@ -150,7 +150,7 @@ async def run_graph(
         "error":           None,
     }
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     try:
         final_state = await loop.run_in_executor(
             None, partial(_run_graph_sync, initial_state, config)
@@ -210,7 +210,7 @@ async def resume_graph(
         "human_edited_text": body.human_edited_text,
     }
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     try:
         final_state = await loop.run_in_executor(
             None, partial(_resume_graph_sync, resume_state, config)
@@ -248,7 +248,7 @@ async def get_run_status(
     Useful for the frontend to poll while a long-running search is in progress.
     """
     config = _make_config(thread_id)
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
 
     state = await loop.run_in_executor(
         None, partial(_get_state_sync, config)

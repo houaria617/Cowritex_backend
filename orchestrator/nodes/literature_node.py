@@ -100,35 +100,50 @@ def literature_node(state: GraphState) -> dict:
     use_web_resources = bool(web_urls) or (not grounded_only)
 
     # ── Resolve papers_folder for locally uploaded PDFs ──────────────────────
-    # Uploads are stored in uploads/{project_id}/ (absolute path).
-    # Pass this as papers_folder so AgentConfig reads the right directory.
+    # IMPORTANT: AgentConfig.papers_folder default is set at CLASS DEFINITION
+    # time via os.getenv() — setting os.environ at runtime has NO effect on
+    # an already-imported dataclass. We must patch the agent INSTANCE directly.
     from pathlib import Path as _Path
     upload_dir = _Path("uploads").resolve() / project_id
-    papers_folder = str(upload_dir) if upload_dir.exists() else None
+    has_local_pdfs = upload_dir.exists() and any(upload_dir.glob("*.pdf"))
 
     input_data = AgentInput(
         query=query,
         citation_style=citation_style,
         use_web_resources=use_web_resources,
         use_ocr=False,
-        web_urls=web_urls,          # ← online papers from search_node
+        web_urls=web_urls,
     )
 
-    # Override papers_folder on the agent config if we have local uploads
-    if papers_folder:
-        logger.info(
-            "literature_node: using local papers_folder=%s", papers_folder
-        )
-        import os as _os
-        _os.environ["LITERATURE_PAPERS_FOLDER"] = papers_folder
-
     logger.info(
-        "literature_node: calling agent | use_web_resources=%s | %d urls | query=%r",
-        use_web_resources, len(web_urls), query[:80],
+        "literature_node: calling agent | use_web_resources=%s | %d urls | "
+        "has_local_pdfs=%s | query=%r",
+        use_web_resources, len(web_urls), has_local_pdfs, query[:80],
     )
 
     try:
-        output = _traced_literature(input_data)
+        # Build and configure the agent before calling generate_review
+        from literature_agent.agent import LiteratureAgent
+        agent = LiteratureAgent()
+
+        # Patch papers_folder on the instance — the only reliable way
+        if has_local_pdfs:
+            agent.config.papers_folder = str(upload_dir)
+            logger.info(
+                "literature_node: overriding papers_folder → %s",
+                agent.config.papers_folder,
+            )
+
+        agent.initialize()
+
+        # Load local PDFs + web resources into the vector store
+        if not agent.load_documents(input_data):
+            logger.warning(
+                "literature_node: no documents loaded "
+                "(no local PDFs and no web URLs) — agent may return empty"
+            )
+
+        output = agent.generate_review(input_data)
     except Exception as exc:
         logger.error("Literature agent failed: %s", exc)
         return {"error": f"Literature agent error: {exc}", "agent_output": None}
@@ -185,14 +200,14 @@ def literature_node(state: GraphState) -> dict:
             f"{unverified_count} claim(s) could not be grounded in source documents."
         )
 
-    # ── Debug (keep until stable) ─────────────────────────────────────────────
-    print(f"\n🔍 output.success       = {output.success}")
-    print(f"🔍 output.error_message = {repr(output.error_message)}")
-    print(f"🔍 web_urls fed         = {web_urls}")
-    print(
-        f"🔍 output.literature_review length  = {len(output.literature_review or '')}")
-    print(
-        f"🔍 output.literature_review preview = {repr((output.literature_review or '')[:200])}")
+    # ── Debug logging ─────────────────────────────────────────────────────────
+    logger.debug(
+        "literature_node output: success=%s error=%r review_len=%d web_urls=%d",
+        output.success,
+        output.error_message,
+        len(output.literature_review or ""),
+        len(web_urls),
+    )
 
     existing = state.get("agent_outputs", {})
 
