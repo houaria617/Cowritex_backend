@@ -3,12 +3,11 @@ orchestrator/router.py
 ───────────────────────
 All conditional-edge routing functions for the CoWriteX graph.
 
-route_intent   — intent_classifier → agents / search
-route_hitl     — hitl_node → persist | edit | agent (regenerate/reject)
+route_intent  — intent_classifier → agents
+route_hitl    — hitl_node → persist | edit | agent (regenerate/reject)
 
-Note: route_after_search is kept for pure "search" intent only.
-Literature always goes directly to literature_node regardless of
-grounded_only — the literature agent handles web resources internally.
+Note: route_after_search has been removed. search_node now uses a direct
+edge to persist (auto-approve), so no conditional routing is needed after it.
 """
 
 from __future__ import annotations
@@ -26,16 +25,12 @@ def route_intent(state: GraphState) -> str:
     """
     Decides the next node after intent classification.
 
-    Key rules:
-      • "search"     intent → always goes to search_node
-      • "literature" intent → always goes directly to literature_node
-                              (grounded_only flag is handled INSIDE the agent:
-                               grounded_only=True  → ChromaDB only
-                               grounded_only=False → agent fetches web resources itself)
-      • "write"      → writing
-      • "visualize"  → visualisation
-      • "chat"       → chat
-      • unknown/error → error_handler
+    • "search"     → search_node  (auto-approves, skips HITL)
+    • "literature" → literature_node  (agent owns web resource handling)
+    • "write"      → writing
+    • "visualize"  → visualisation
+    • "chat"       → chat
+    • unknown/err  → error_handler
     """
     if state.get("error") and state["intent"] == "unknown":
         return "error_handler"
@@ -43,15 +38,12 @@ def route_intent(state: GraphState) -> str:
     intents: list[str] = state.get("intents", [state.get("intent", "unknown")])
     primary = intents[0] if intents else "unknown"
 
-    # ── Explicit search intent ────────────────────────────────────────────────
     if primary == "search":
         return "search"
 
-    # ── Literature: always direct — agent owns web resource handling ──────────
     if primary == "literature":
         return "literature"
 
-    # ── Standard agent routing ────────────────────────────────────────────────
     routing = {
         "write":     "writing",
         "visualize": "visualisation",
@@ -64,23 +56,8 @@ def route_intent(state: GraphState) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2.  search_node  →  merge
-# ─────────────────────────────────────────────────────────────────────────────
-
-def route_after_search(state: GraphState) -> str:
-    """
-    After search_node completes for a pure "search" intent,
-    surface results directly to merge/HITL.
-
-    Literature no longer routes through search_node, so this
-    function always returns "merge".
-    """
-    logger.info("route_after_search: → merge")
-    return "merge"
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 3.  hitl_node  →  persist | edit | agent (regenerate / reject)
+# 2.  hitl_node  →  persist | edit | agent (regenerate / reject)
+#     Only reached by literature / writing / visualisation — never search.
 # ─────────────────────────────────────────────────────────────────────────────
 
 def route_hitl(state: GraphState) -> str:
@@ -90,7 +67,7 @@ def route_hitl(state: GraphState) -> str:
     approve    → persist
     edit       → edit
     reject /
-    regenerate → back to the last agent that produced the output
+    regenerate → back to the originating agent
     """
     action = state.get("hitl_action", "approve")
     last_agent = state.get("last_agent", "writing")
@@ -106,7 +83,6 @@ def route_hitl(state: GraphState) -> str:
             "writing":    "writing",
             "literature": "literature",
             "visualize":  "visualisation",
-            "search":     "search",
         }
         destination = agent_map.get(last_agent, "writing")
         logger.info(

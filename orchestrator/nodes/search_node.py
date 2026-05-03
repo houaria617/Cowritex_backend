@@ -5,17 +5,28 @@ Dedicated academic paper search node.
 
 Triggered when:
   • intent == "search"   (user explicitly wants papers)
-  • intent == "literature" AND grounded_only == False
+
+Outputs
+───────
+search_node produces TWO output representations of the same data:
+
+  1. search_results  — List[dict]  raw paper records (for downstream nodes /
+                       frontend API consumption), sorted by relevance_score
+  2. search_summary  — dict  structured JSON-serialisable summary
+                       (replaces the old markdown string) so the frontend
+                       can render cards, sort, filter without parsing markdown
+
+Auto-approve
+────────────
+Search results never go through HITL — they are factual retrieval output,
+not AI-generated text. search_node sets hitl_action="approve" directly so
+the graph wires straight to persist → output → END.
 
 Scoring
 ───────
 search_node calls core.py functions directly, which do NOT call scoring.py.
 So we call calculate_relevance_scores() ourselves after fetching and
 deduplication, before sorting and persisting.
-
-The scoring function writes 'relevance_score' onto each paper dict.
-The engine wrapper (used elsewhere) renames that to 'score' in its JSON
-output — here we're pre-wrapper so we always read 'relevance_score'.
 
 Field-name variants (core.py vs wrapper):
   url / paper_url        → resolved by _get_url()
@@ -24,6 +35,7 @@ Field-name variants (core.py vs wrapper):
 
 from __future__ import annotations
 
+import json
 import logging
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -87,8 +99,11 @@ def _get_score(p: dict) -> float:
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
-def _build_query(instruction: str, provider: str) -> str:
-    import json
+def _build_query(instruction: str, provider: str) -> tuple[str, list[str]]:
+    """
+    Use LLM to distill the instruction into a clean academic query.
+    Returns (query_string, keywords_list).
+    """
     try:
         llm = get_llm(provider, temperature=0.0)
         response = llm.invoke([
@@ -98,11 +113,13 @@ def _build_query(instruction: str, provider: str) -> str:
         raw = (response.content.strip()
                .lstrip("```json").lstrip("```").rstrip("```").strip())
         parsed = json.loads(raw)
-        return parsed.get("query") or instruction
+        query = parsed.get("query") or instruction
+        keywords = parsed.get("keywords") or []
+        return query, keywords
     except Exception as exc:
         logger.warning(
             "Query extraction failed (%s) — using raw instruction", exc)
-        return instruction
+        return instruction, []
 
 
 def _deduplicate(papers: list[dict]) -> list[dict]:
@@ -129,11 +146,9 @@ def _enrich_abstracts(papers: list[dict], verbose: bool = False) -> list[dict]:
 
 def _score_and_sort(papers: list[dict], query: str) -> list[dict]:
     """
-    Call the engine's own scoring function then sort descending.
-
+    Call the engine's own TF-IDF scoring function then sort descending.
     calculate_relevance_scores() writes 'relevance_score' onto each dict
-    in-place (TF-IDF when sklearn is available, keyword fallback otherwise).
-    We then sort by that field — no custom heuristic needed.
+    in-place. Falls back to keyword scoring if sklearn is unavailable.
     """
     if not papers:
         return papers
@@ -150,84 +165,68 @@ def _score_and_sort(papers: list[dict], query: str) -> list[dict]:
     return papers
 
 
-def _format_summary(papers: list[dict], query: str) -> str:
+def _build_json_summary(
+    papers: list[dict],
+    query: str,
+    keywords: list[str],
+) -> dict:
     """
-    Markdown summary for HITL and literature_node.
+    Build a structured JSON-serialisable summary of search results.
 
-    Per paper:
-      title, authors, year, source, citations, relevance score,
-      PDF link, Google Scholar URL, abstract preview (300 chars).
+    Schema
+    ──────
+    {
+      "query":         str,
+      "keywords":      list[str],
+      "total_results": int,
+      "results": [
+        {
+          "rank":               int,        // 1-based, sorted by relevance
+          "title":              str,
+          "authors":            list[str],
+          "year":               int | null,
+          "source":             str,        // "Semantic Scholar" | "Google Scholar"
+          "citations":          int,
+          "relevance_score":    float,      // 0.0–1.0 from scoring.py
+          "abstract":           str,        // full abstract (not truncated)
+          "url":                str,        // landing page
+          "pdf_url":            str,        // direct PDF or ""
+          "google_scholar_url": str         // GS search link or ""
+        },
+        ...
+      ]
+    }
     """
-    if not papers:
-        return f"No papers found for query: **{query}**"
-
-    lines = [f"## 🔍 Search Results for: *{query}*\n"]
-    lines.append(f"Found **{len(papers)}** paper(s), sorted by relevance.\n")
-
+    results = []
     for i, p in enumerate(papers, 1):
-        title = p.get("title", "Untitled")
-        authors = ", ".join(p.get("authors", [])[:3])
-        if len(p.get("authors", [])) > 3:
-            authors += " et al."
-        year = p.get("year") or "n.d."
-        source = p.get("source", "")
-        cites = p.get("citations", 0)
-        score = _get_score(p)
-        pdf = _get_pdf(p)
-        gs_url = p.get("google_scholar_url") or ""
-        abstract = (p.get("abstract") or "").strip()
-        abstract_preview = (
-            abstract[:300] + "…") if len(abstract) > 300 else abstract
+        results.append({
+            "rank":               i,
+            "title":              p.get("title", "Untitled"),
+            "authors":            p.get("authors", []),
+            "year":               p.get("year"),
+            "source":             p.get("source", ""),
+            "citations":          p.get("citations", 0) or 0,
+            "relevance_score":    _get_score(p),
+            "abstract":           (p.get("abstract") or "").strip(),
+            "url":                _get_url(p),
+            "pdf_url":            _get_pdf(p),
+            "google_scholar_url": p.get("google_scholar_url") or "",
+        })
 
-        lines.append(f"### {i}. {title}")
-        lines.append(
-            f"**Authors:** {authors}  |  **Year:** {year}  |  "
-            f"**Source:** {source}  |  **Citations:** {cites}  |  "
-            f"**Relevance:** {score:.4f}"
-        )
-
-        link_parts = []
-        if pdf:
-            link_parts.append(f"[PDF]({pdf})")
-        if gs_url:
-            link_parts.append(f"[Google Scholar]({gs_url})")
-        if link_parts:
-            lines.append("**Links:** " + "  ·  ".join(link_parts))
-
-        if abstract_preview:
-            lines.append(f"\n> {abstract_preview}")
-
-        lines.append("")
-
-    return "\n".join(lines)
-
-
-def _sanitize_papers(papers: list[dict]) -> list[dict]:
-    """
-    Convert numpy scalar types to native Python so MemorySaver
-    can msgpack-serialize the state without crashing.
-    calculate_relevance_scores() writes numpy.float64 into relevance_score.
-    """
-    try:
-        import numpy as np
-
-        def _convert(v):
-            if isinstance(v, np.floating):
-                return float(v)
-            if isinstance(v, np.integer):
-                return int(v)
-            if isinstance(v, np.ndarray):
-                return v.tolist()
-            return v
-        return [{k: _convert(v) for k, v in p.items()} for p in papers]
-    except ImportError:
-        return papers  # numpy not available — values are already native
+    return {
+        "query":         query,
+        "keywords":      keywords,
+        "total_results": len(results),
+        "results":       results,
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 
 def search_node(state: GraphState) -> dict:
     """
+    Academic paper search node.
+
     State reads:
         instruction / user_message  — what to search for
         preferences.grounded_only   — if True, skip entirely
@@ -235,12 +234,14 @@ def search_node(state: GraphState) -> dict:
         project_id                  — for DB persistence
 
     State writes:
-        search_results   — List[dict] scored and sorted by relevance_score,
-                           ready for literature_node and frontend display
-        search_summary   — str markdown formatted summary
-        agent_outputs["search"] — same as search_summary
-        last_agent       — "search"
-        error            — None on success
+        search_results          — List[dict] raw paper records, each carrying
+                                  relevance_score, sorted highest-first
+        search_summary          — dict  structured JSON summary (frontend-ready)
+        agent_outputs["search"] — JSON string of search_summary (for merge_node
+                                  display / output_node passthrough)
+        last_agent              — "search"
+        hitl_action             — "approve"  (search always auto-approves)
+        error                   — None on success
     """
     prefs = state.get("preferences", {})
     project_id = state["project_id"]
@@ -250,21 +251,26 @@ def search_node(state: GraphState) -> dict:
     # ── Grounded-only guard ───────────────────────────────────────────────────
     if prefs.get("grounded_only", False):
         logger.info("search_node: grounded_only=True — skipping web search")
+        empty_summary = {
+            "query":         instruction,
+            "keywords":      [],
+            "total_results": 0,
+            "results":       [],
+            "note":          "Web search disabled (grounded-only mode).",
+        }
         existing = state.get("agent_outputs", {})
         return {
             "search_results": [],
-            "search_summary": (
-                "ℹ️ Web search disabled (grounded-only mode). "
-                "Literature node will use local knowledge base only."
-            ),
-            "agent_outputs":  {**existing, "search": ""},
+            "search_summary": empty_summary,
+            "agent_outputs":  {**existing, "search": json.dumps(empty_summary, ensure_ascii=False)},
             "last_agent":     "search",
+            "hitl_action":    "approve",   # auto-approve even on skip
             "error":          None,
         }
 
-    # ── Build focused query ───────────────────────────────────────────────────
-    query = _build_query(instruction, provider)
-    logger.info("search_node: query=%r", query)
+    # ── Build focused academic query ──────────────────────────────────────────
+    query, keywords = _build_query(instruction, provider)
+    logger.info("search_node: query=%r  keywords=%s", query, keywords)
 
     # ── Fetch from both sources ───────────────────────────────────────────────
     papers: list[dict] = []
@@ -286,12 +292,10 @@ def search_node(state: GraphState) -> dict:
     # ── Post-process ──────────────────────────────────────────────────────────
     papers = _deduplicate(papers)
     papers = _enrich_abstracts(papers, verbose=False)
-
-    # Score with engine's own TF-IDF scorer, then sort descending
     papers = _score_and_sort(papers, query)
 
-    # ── Format markdown summary ───────────────────────────────────────────────
-    summary = _format_summary(papers, query)
+    # ── Build structured JSON summary ─────────────────────────────────────────
+    summary = _build_json_summary(papers, query, keywords)
 
     # ── Persist to DB ─────────────────────────────────────────────────────────
     if papers:
@@ -312,18 +316,15 @@ def search_node(state: GraphState) -> dict:
         except Exception as exc:
             logger.warning("search_node: DB persistence failed: %s", exc)
 
+    # ── Return — hitl_action="approve" skips HITL entirely ───────────────────
     existing = state.get("agent_outputs", {})
-
-    # Convert numpy types → native Python before storing in state.
-    # MemorySaver msgpack cannot serialize numpy.float64.
-    papers = _sanitize_papers(papers)
 
     return {
         "search_results":  papers,
         "search_summary":  summary,
-        "agent_outputs":   {**existing, "search": summary},
+        "agent_outputs":   {**existing, "search": json.dumps(summary, ensure_ascii=False, indent=2)},
         "last_agent":      "search",
-        "error":           None,
-        "hitl_action":     None,
+        "hitl_action":     "approve",    # search auto-approves — no human review needed
         "hitl_feedback":   None,
+        "error":           None,
     }

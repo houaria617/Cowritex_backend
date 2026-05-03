@@ -3,16 +3,14 @@ orchestrator/nodes/literature_node.py
 ──────────────────────────────────────
 Calls LiteratureAgent directly — avoids file I/O round-trip.
 
-If search_results are already in state (populated by search_node),
-their PDF/abstract URLs are extracted and passed as web_urls so the
-LiteratureAgent can fetch and chunk them via process_web_resources.
-
-This is the only interface the unmodified LiteratureAgent exposes for
-injecting external content — AgentInput.use_web_resources + web_urls.
+Web resource handling (grounded_only=False) is handled inside the agent.
+The orchestrator patches papers_folder on the agent instance so local PDFs
+uploaded per-project are found correctly, then delegates everything else.
 """
 
 from __future__ import annotations
 import logging
+from pathlib import Path
 from langsmith import traceable
 
 from ..state import GraphState
@@ -22,51 +20,13 @@ from literature_agent.config import AgentInput
 
 logger = logging.getLogger(__name__)
 
-# Maximum number of paper URLs to feed into the agent.
-# process_web_resources fetches each URL synchronously, so keep this
-# bounded to avoid multi-minute runtimes.
-_MAX_WEB_URLS = 8
-
-
-def _extract_urls_from_papers(papers: list[dict]) -> list[str]:
-    """
-    Pull the best available URL out of each search-result paper dict.
-
-    Priority order:
-      1. pdf_link  — direct PDF (highest quality for chunking)
-      2. url       — abstract / landing page (fallback)
-
-    Only HTTP(S) URLs are included; None / empty strings are skipped.
-    Deduplication preserves order.
-    """
-    seen: set[str] = set()
-    urls: list[str] = []
-
-    for paper in papers:
-        for key in ("pdf_link", "url"):
-            candidate = (paper.get(key) or "").strip()
-            if candidate.startswith("http") and candidate not in seen:
-                seen.add(candidate)
-                urls.append(candidate)
-                break               # one URL per paper is enough
-
-    return urls[:_MAX_WEB_URLS]
-
-
-def _run_agent(input_data: AgentInput):
-    agent = LiteratureAgent()
-    return agent.generate_review(input_data)
-
-
-_traced_literature = traceable(name="literature_agent_call")(_run_agent)
-
 
 def literature_node(state: GraphState) -> dict:
     project_id = state["project_id"]
     prefs = state.get("preferences", {})
     instruction = state.get("instruction") or state["user_message"]
 
-    # ── Build query (append HITL feedback when regenerating) ─────────────────
+    # ── Append HITL feedback when regenerating ────────────────────────────────
     query = instruction
     if state.get("hitl_feedback"):
         query = f"{query}\n\nFeedback: {state['hitl_feedback']}"
@@ -74,59 +34,28 @@ def literature_node(state: GraphState) -> dict:
     citation_style = prefs.get("citation_style", "APA")
     grounded_only = prefs.get("grounded_only", False)
 
-    # ── Derive web_urls from search_results ───────────────────────────────────
-    # search_node populates state["search_results"] as List[dict] with keys:
-    #   title, authors, abstract, pdf_link, url, year, citations, source
-    #
-    # The unmodified LiteratureAgent has NO pre_fetched_papers parameter.
-    # Its only external-content hook is:
-    #   AgentInput(use_web_resources=True, web_urls=[...])
-    # which routes through load_documents → process_web_resources.
-    #
-    # So we convert paper records → URLs here in the orchestrator layer.
-    pre_fetched_papers = state.get("search_results") or []
-    web_urls: list[str] = []
-
-    if pre_fetched_papers and not grounded_only:
-        web_urls = _extract_urls_from_papers(pre_fetched_papers)
-        logger.info(
-            "literature_node: extracted %d web_urls from %d search_results",
-            len(web_urls), len(pre_fetched_papers),
-        )
-
-    # use_web_resources must be True whenever we have URLs to fetch,
-    # regardless of the grounded_only flag (grounded_only only suppresses
-    # the upstream search_node — if we already have results we use them).
-    use_web_resources = bool(web_urls) or (not grounded_only)
-
-    # ── Resolve papers_folder for locally uploaded PDFs ──────────────────────
-    # IMPORTANT: AgentConfig.papers_folder default is set at CLASS DEFINITION
-    # time via os.getenv() — setting os.environ at runtime has NO effect on
-    # an already-imported dataclass. We must patch the agent INSTANCE directly.
-    from pathlib import Path as _Path
-    upload_dir = _Path("uploads").resolve() / project_id
+    # ── Resolve local PDF folder ──────────────────────────────────────────────
+    upload_dir = Path("uploads").resolve() / project_id
     has_local_pdfs = upload_dir.exists() and any(upload_dir.glob("*.pdf"))
 
     input_data = AgentInput(
         query=query,
         citation_style=citation_style,
-        use_web_resources=use_web_resources,
+        use_web_resources=not grounded_only,
         use_ocr=False,
-        web_urls=web_urls,
+        web_urls=[],   # agent resolves its own web sources internally
     )
 
     logger.info(
-        "literature_node: calling agent | use_web_resources=%s | %d urls | "
+        "literature_node: calling agent | use_web_resources=%s | "
         "has_local_pdfs=%s | query=%r",
-        use_web_resources, len(web_urls), has_local_pdfs, query[:80],
+        not grounded_only, has_local_pdfs, query[:80],
     )
 
     try:
-        # Build and configure the agent before calling generate_review
-        from literature_agent.agent import LiteratureAgent
         agent = LiteratureAgent()
 
-        # Patch papers_folder on the instance — the only reliable way
+        # Patch papers_folder on the instance — only reliable way at runtime
         if has_local_pdfs:
             agent.config.papers_folder = str(upload_dir)
             logger.info(
@@ -136,7 +65,6 @@ def literature_node(state: GraphState) -> dict:
 
         agent.initialize()
 
-        # Load local PDFs + web resources into the vector store
         if not agent.load_documents(input_data):
             logger.warning(
                 "literature_node: no documents loaded "
@@ -144,14 +72,14 @@ def literature_node(state: GraphState) -> dict:
             )
 
         output = agent.generate_review(input_data)
+
     except Exception as exc:
         logger.error("Literature agent failed: %s", exc)
         return {"error": f"Literature agent error: {exc}", "agent_output": None}
 
     if not output.success:
-        logger.error(
-            "Literature agent returned failure: %s", output.error_message
-        )
+        logger.error("Literature agent returned failure: %s",
+                     output.error_message)
         return {"error": output.error_message, "agent_output": None}
 
     # ── Persist to DB ─────────────────────────────────────────────────────────
@@ -200,13 +128,10 @@ def literature_node(state: GraphState) -> dict:
             f"{unverified_count} claim(s) could not be grounded in source documents."
         )
 
-    # ── Debug logging ─────────────────────────────────────────────────────────
     logger.debug(
-        "literature_node output: success=%s error=%r review_len=%d web_urls=%d",
-        output.success,
-        output.error_message,
-        len(output.literature_review or ""),
-        len(web_urls),
+        "literature_node output: success=%s error=%r review_len=%d",
+        output.success, output.error_message, len(
+            output.literature_review or ""),
     )
 
     existing = state.get("agent_outputs", {})

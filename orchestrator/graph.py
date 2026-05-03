@@ -7,19 +7,20 @@ Flow summary
 ────────────
 intent_classifier
     │
-    ├─► "search"      → search_node → merge → hitl
+    ├─► "search"     → search_node → persist → output → END
+    │                  (auto-approved — no HITL for factual retrieval)
     │
-    ├─► "literature"  → literature_node → merge → hitl
+    ├─► "literature" → literature_node → merge → hitl
     │     (grounded_only=True  → agent uses ChromaDB only)
     │     (grounded_only=False → agent fetches web resources itself)
     │
-    ├─► "write"       → writing       → merge → hitl
-    ├─► "visualize"   → visualisation → merge → hitl
+    ├─► "write"      → writing       → merge → hitl
+    ├─► "visualize"  → visualisation → merge → hitl
     │
-    ├─► "chat"        → chat → output → END
+    ├─► "chat"       → chat → output → END
     └─► "unknown" / error → error_handler → END
 
-HITL resume actions:
+HITL resume actions (literature / writing / visualisation only):
     approve    → persist → output → END
     edit       → edit    → persist → output → END
     regenerate → back to the originating agent
@@ -29,7 +30,7 @@ HITL resume actions:
 from langgraph.graph import StateGraph, END
 
 from .state import GraphState
-from .router import route_intent, route_after_search, route_hitl
+from .router import route_intent, route_hitl
 from .nodes import (
     intent_classifier_node,
     search_node,
@@ -67,8 +68,6 @@ def build_graph(checkpointer):
     g.set_entry_point("intent_classifier")
 
     # ── intent_classifier → agents ────────────────────────────────────────────
-    # Literature always routes directly to literature_node.
-    # search_node is only used for explicit "search" intent.
     g.add_conditional_edges(
         "intent_classifier",
         route_intent,
@@ -82,16 +81,10 @@ def build_graph(checkpointer):
         },
     )
 
-    # ── search_node always goes to merge (pure search only) ───────────────────
-    g.add_conditional_edges(
-        "search",
-        route_after_search,
-        {
-            "merge": "merge",
-        },
-    )
+    # ── search fast-path: auto-approved, skip merge + HITL ───────────────────
+    g.add_edge("search", "persist")
 
-    # ── Agent → merge (all non-chat agents converge here) ────────────────────
+    # ── AI agents → merge → HITL ──────────────────────────────────────────────
     for agent in ("writing", "literature", "visualisation"):
         g.add_edge(agent, "merge")
 
@@ -100,7 +93,7 @@ def build_graph(checkpointer):
     # ── chat fast-path ────────────────────────────────────────────────────────
     g.add_edge("chat", "output")
 
-    # ── HITL branching ────────────────────────────────────────────────────────
+    # ── HITL branching (literature / writing / visualisation only) ────────────
     g.add_conditional_edges(
         "hitl",
         route_hitl,
@@ -110,7 +103,6 @@ def build_graph(checkpointer):
             "writing":       "writing",
             "literature":    "literature",
             "visualisation": "visualisation",
-            "search":        "search",
         },
     )
 
