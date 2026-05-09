@@ -1,116 +1,149 @@
-# CoWriteX Backend
+<h1 align="center">
+  <span style="color: #7c3aed"></span> 
+  <span style="color: #8b5cf6">C</span><span style="color: #7c3aed">o</span><span style="color: #6d28d9">W</span><span style="color: #5b21b6">r</span><span style="color: #4c1d95">i</span><span style="color: #6d28d9">t</span><span style="color: #7c3aed">e</span><span style="color: #8b5cf6">X</span>
+  <span style="color: #a78bfa; font-size: 0.6em;"> Backend</span>
+</h1>
 
-Human-in-the-Loop AI Research Writing Assistant — Backend
+<h3 align="center">
+  <span style="color: #a78bfa">⚙️ Human-in-the-Loop AI Research Writing Assistant — Backend</span>
+</h3>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.11+-blue?style=for-the-badge&logo=python&logoColor=white&labelColor=4c1d95&color=7c3aed" />
+  <img src="https://img.shields.io/badge/FastAPI-backend-009688?style=for-the-badge&logo=fastapi&logoColor=white&labelColor=4c1d95&color=7c3aed" />
+  <img src="https://img.shields.io/badge/LangGraph-orchestrator-8b5cf6?style=for-the-badge&labelColor=4c1d95&color=7c3aed" />
+  <img src="https://img.shields.io/badge/ChromaDB-vector_store-7c3aed?style=for-the-badge&labelColor=4c1d95&color=a78bfa" />
+  <img src="https://img.shields.io/badge/Groq-Llama_3-0d9488?style=for-the-badge&labelColor=4c1d95&color=7c3aed" />
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/ENSIA-National%20Higher%20School%20of%20AI-7c3aed?style=flat-square" />
+  <img src="https://img.shields.io/badge/Department-Intelligent%20Systems%20Engineering-8b5cf6?style=flat-square" />
+</p>
 
 ---
 
-## What is this?
-
-CoWriteX is an AI-powered research writing assistant that helps researchers write, search, and cite academic papers. This repo contains the backend — the orchestrator, the agents, the API, and the database.
+<p align="center">
+  <b>Team:</b> Bouaziz Zineb • Djabir Houaria • Meriche Yasmine • Haddoud Mehdi<br/>
+  <b>Supervisor:</b> Dr. HADJ AMEUR
+</p>
 
 ---
 
-## Project Structure
+## <span style="color: #7c3aed">📖</span> Overview
+
+> *"Co — Collaborative Human–AI Partnership | Write — End-to-End Academic Writing | X — Extended Intelligence"*
+
+This repo contains the **backend** of CoWriteX — the orchestrator, the AI agents, the FastAPI server, and the database layer that power the research writing assistant.
+
+<table align="center">
+  <tr>
+    <td align="center"><span style="color: #a78bfa; font-size: 1.5em;"></span><br/><b>LangGraph</b><br/>orchestrator</td>
+    <td align="center"><span style="color: #a78bfa; font-size: 1.5em;"></span><br/><b>Groq Llama 3</b><br/>LLM provider</td>
+    <td align="center"><span style="color: #a78bfa; font-size: 1.5em;"></span><br/><b>ChromaDB</b><br/>vector store</td>
+    <td align="center"><span style="color: #a78bfa; font-size: 1.5em;"></span><br/><b>FastAPI</b><br/>REST API</td>
+  </tr>
+</table>
+
+---
+
+## <span style="color: #7c3aed">📁</span> Project Structure
 
 ```
 cowritex-backend/
-├── orchestrator/          # Coordinates everything — routes tasks between agents
-├── writing_agent/         # Responsible for generating and editing drafts
-├── literature_agent/      # Responsible for searching and retrieving papers
-├── visualization/         # Generates charts, tables, and exportable files
-├── api/                   # FastAPI backend — exposes endpoints to the frontend
-├── database/              # Database schema and models
-├── config/                # App settings and environment variables
-└── tests/                 # Tests for all modules
+├── 🧠 orchestrator/          # Coordinates everything — routes tasks between agents
+├── ✍️ writing_agent/         # Responsible for generating and editing drafts
+├── 📚 literature_agent/      # Responsible for searching and retrieving papers
+├── 📊 visualization/         # Generates charts, tables, and exportable files
+├── 🔌 api/                   # FastAPI backend — exposes endpoints to the frontend
+├── 🗄️ database/              # Database schema and models
+├── ⚙️ config/                # App settings and environment variables
+└── 🧪 tests/                 # Tests for all modules
 ```
 
 ---
 
-## Team
+## <span style="color: #7c3aed">🧩</span> Tech Stack
 
-| Name | Responsibility |
-|------|---------------|
-| [Your Name] | Orchestrator + FastAPI backend + Database |
-| [Teammate 1] | Writing Agent |
-| [Teammate 2] | Literature Agent |
-| [Teammate 3] | Frontend (separate repo) |
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Orchestrator | LangGraph |
-| LLM | Groq (Llama 3) |
-| Vector Store | ChromaDB |
-| Database | PostgreSQL (Supabase) |
-| Backend | FastAPI |
-| Package manager | uv |
+| **Layer** | **Technology** |
+|:---:|:---:|
+|  Orchestrator | LangGraph |
+|  LLM | Groq (Llama 3) |
+|  Vector Store | ChromaDB |
+|  Database | PostgreSQL (Supabase) |
+|  Backend | FastAPI |
+|  Package Manager | uv |
 
 ---
 
-## Getting Started
+## <span style="color: #7c3aed">🚀</span> Getting Started
 
-### 1. Clone the repo
+### <span style="color: #8b5cf6"> Prerequisites</span>
+
 ```bash
-git clone https://github.com/your-org/cowritex-backend
+Python 3.11+
+uv (pip install uv)
+```
+
+### <span style="color: #8b5cf6"> Installation</span>
+
+```bash
+# Clone the repository
+git clone https://github.com/zinebbouaziz/FRONT.git
 cd cowritex-backend
-```
 
-### 2. Create and activate virtual environment
-```bash
+# Create virtual environment
 uv venv
 source .venv/bin/activate   # Linux/Mac
 .venv\Scripts\activate      # Windows
-```
 
-### 3. Install dependencies
-```bash
+# Install dependencies
 uv sync
 ```
 
-### 4. Set up environment variables
+### <span style="color: #8b5cf6"> Environment Variables</span>
+
 ```bash
 cp .env.example .env
-# Open .env and fill in your API keys
 ```
 
-### 5. Run the API
-```bash
-uv run uvicorn api.main:app --reload
-```
+Fill in your `.env` file:
 
-### 6. Open API docs
-```
-http://localhost:8000/docs
-```
-
----
-
-## Environment Variables
-
-Copy `.env.example` to `.env` and fill in the values:
-
-```bash
+```env
 GROQ_API_KEY=           # Get from console.groq.com (free)
 TAVILY_API_KEY=         # Get from app.tavily.com (free)
 LANGSMITH_API_KEY=      # Get from smith.langchain.com (free)
 DATABASE_URL=           # Get from Supabase dashboard
 ```
 
+### <span style="color: #8b5cf6"> Run Development Server</span>
+
+```bash
+uv run uvicorn api.main:app --reload
+```
+
+Open [http://localhost:8000/docs](http://localhost:8000/docs) 
+
+### <span style="color: #8b5cf6"> Run Tests</span>
+
+```bash
+uv run pytest tests/
+```
+
 ---
 
-## Git Rules — Read Before You Push
+## <span style="color: #7c3aed"></span> Git Rules — Read Before You Push
 
-### Branches
+### <span style="color: #8b5cf6"> Branches</span>
+
 ```
 main        → protected, never push directly
 dev         → main working branch
 feature/    → your working branch (branch from dev)
 ```
 
-### Workflow
+### <span style="color: #8b5cf6"> Workflow</span>
+
 ```bash
 # 1. Always branch from dev
 git checkout dev
@@ -125,46 +158,83 @@ git push origin feature/your-feature-name
 # 4. Get at least one review before merging
 ```
 
-### Commit format
+### <span style="color: #8b5cf6"> Commit Format</span>
+
 ```
 type(scope): short description
 
 Examples:
-feat(orchestrator): add conditional routing logic
-fix(literature): handle empty search results
-refactor(state): update ResearchState fields
-docs(readme): update setup instructions
+ feat(orchestrator): add conditional routing logic
+ fix(literature): handle empty search results
+ refactor(state): update ResearchState fields
+ docs(readme): update setup instructions
 ```
 
-### Golden rules
-- **Never push directly to main or dev**
-- **Never commit your `.env` file**
-- **Each person only works in their own folder**
-- **Update `.env.example` if you add a new environment variable**
-- **All cross-agent communication goes through the shared state — do not import from another agent's folder without discussion**
+### <span style="color: #8b5cf6"> Golden Rules</span>
+
+<table>
+  <tr>
+    <td></td>
+    <td><b>Never push directly to main or dev</b></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td><b>Never commit your <code>.env</code> file</b></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td><b>Each person only works in their own folder</b></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td><b>Update <code>.env.example</code> if you add a new environment variable</b></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td><b>All cross-agent communication goes through the shared state — do not import from another agent's folder without discussion</b></td>
+  </tr>
+</table>
 
 ---
 
-## Coding Conventions
+## <span style="color: #7c3aed">📐</span> Coding Conventions
 
-- Use **snake_case** for files, folders, functions, and variables
-- Use **PascalCase** for class names
-- Use **UPPER_SNAKE_CASE** for constants
-- Every function must have a **docstring**
-- Always use **type hints**
-- Never hardcode API keys — always use `config/settings.py`
-- No hardcoded model names — define them in `config/settings.py`
+<table>
+  <tr>
+    <td></td>
+    <td>Use <b>snake_case</b> for files, folders, functions, and variables</td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>Use <b>PascalCase</b> for class names</td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>Use <b>UPPER_SNAKE_CASE</b> for constants</td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>Every function must have a <b>docstring</b></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>Always use <b>type hints</b></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>Never hardcode API keys — always use <code>config/settings.py</code></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>No hardcoded model names — define them in <code>config/settings.py</code></td>
+  </tr>
+</table>
 
 ---
 
-## Running Tests
-
-```bash
-uv run pytest tests/
-```
-
----
-
-## Questions?
-
-Open an issue or message the team lead.
+<p align="center">
+  <br/>
+  <span style="color: #8b5cf6; font-size: 1.2em;"><b> CoWriteX Backend — Orchestrating AI for Trustworthy Academic Writing ⚡</b></span>
+  <br/><br/>
+  <span style="color: #a78bfa">ENSIA • Intelligent Systems Engineering • 2025/2026</span>
+</p>
