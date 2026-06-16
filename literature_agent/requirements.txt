@@ -1,0 +1,12 @@
+sentence-transformers
+faiss-cpu
+numpy
+openai
+python-dotenv
+PyMuPDF
+pytesseract
+pillow
+pypdf
+pdfplumber
+requests
+beautifulsoup4
